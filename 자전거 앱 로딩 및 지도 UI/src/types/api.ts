@@ -322,6 +322,27 @@ export interface DriverLivePosition {
   active_mission_id: string | null;
 }
 
+export interface TestDeviceAssignment {
+  device_id: string;
+  scenario_id: string;
+  driver_id: string;
+  driver_name: string;
+  plan_id: string;
+  revision: number;
+  bound_at: string;
+}
+
+export interface TestDriverState {
+  scenario_id: string;
+  driver_id: string;
+  mission_id: string | null;
+  mission_status: MissionStatus | null;
+  current_location: Coordinate | null;
+  next_stop: MissionStop | null;
+  arrived: boolean;
+  movement_version: number;
+}
+
 export interface MissionListResponse {
   count: number;
   missions: MissionSummary[];

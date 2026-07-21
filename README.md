@@ -23,29 +23,39 @@ python -m uvicorn app.main:app --reload
 
 ## 테스트 패널
 
-`TEST_MODE=true`로 실행하면 `/test-panel`에서 코어 모델 JSON부터 기사 배정, TMAP 지도, QR 반납까지 전체 흐름을 시험할 수 있다. 이 모드에서는 JWT 로그인, 관리자 QR 키, Play Integrity/App Attest 검증을 우회한다. TMAP 키를 입력하거나 서버 환경변수에 설정한 경우에만 공식 TMAP 지도와 차량 경로 API를 호출한다.
+`TEST_MODE=true`로 실행하면 `/test-panel`에서 과거 시점의 실제 코어 모델 추론부터 테스트폰 QR 수행까지 하나의 시나리오로 시험할 수 있다. 이 모드에서는 JWT 로그인, 관리자 QR 키, Play Integrity/App Attest 검증을 우회한다. 테스트 TMAP 키는 서버와 기사 앱에 기본 연결되어 별도 입력이 필요 없다.
 
 패널에서 지원하는 작업:
 
-- 코어 모델 JSON 업로드 또는 내장 JSON 더미 불러오기
-- 코어 예측 순유입·부족도·시작 재고를 이용한 기사별 재배치 계획 생성
-- TMAP 지도에서 기사별 색상 경로, 출발·픽업·반납 마커와 정차 순서 확인
-- TMAP 차량 경로의 회전 안내·도로명·거리 확인
-- 관리자 화면에서 대여소별 스캔 가능한 SVG QR 생성·미리보기
-- 사용자 역할을 관리자 또는 테스트 기사(김기사/이기사)로 즉시 전환
-- 테스트 기사 화면에서 미션 수락 → 운행 시작 → 대여소 도착을 단계별 실행
-- 픽업 자전거 QR 생성과 반납 대여소 QR 스캔을 실제 API 순서로 처리
-- 기사별 전체 미션 자동 운행으로 가상 GPS·QR·리워드 흐름 일괄 검증
-- 리워드 검증 대기와 일괄 승인
-- 기사 재배정·미션 취소
-- 현장 사고 신고와 GPS 순간이동 이상 테스트
-- 전체 테스트 데이터 초기화
+- PR #1 커밋 `b3e9133726b5eee5ac3472f7282dcc5d5bb16f09`의 `Hosu/snapshot_engine.py`와 STGNN 가중치로 지원 날짜·회차 추론
+- 선택 시점을 기준으로 지정 범위 안의 임의 기사 수, 이름, 거주지 위치를 seed 기반으로 생성
+- 기사 거주지에서 가까운 회수지를 우선하는 기존 배차 엔진과 TMAP 차량 경로 실행
+- TMAP 지도에서 기사별 출발·픽업·반납 위치, 전체 경로, 정차 순서와 도로 안내 확인
+- 생성된 기사 한 명을 `RIDEGO-TEST-DEVICE-01` 테스트폰에 연결
+- 관리자가 선택 기사를 다음 정차지 좌표로 강제 이동하고 기사 앱이 서버 도착 상태를 반영
+- 현재 정차지에 필요한 대여소·자전거 QR을 실제 스캔 순서대로 한 장씩 표시
+- 테스트폰 카메라로 픽업 자전거 QR, 반납 대여소 QR, 동일 자전거 QR을 실제 업무 API 순서로 처리
 
-테스트 요청은 `X-Test-Role: admin|operator|driver`와 기사인 경우 `X-Test-Driver-Id` 헤더를 사용한다. 패널이 이 헤더를 자동으로 넣으므로 별도 로그인은 필요 없다. 관리자가 QR을 생성하면 브라우저의 테스트 저장소에 payload가 보관되고, 같은 패널에서 기사 역할로 바꾸면 반납 단계의 가상 스캔에 사용된다. 테스트 전용 QR API는 `POST /api/v1/test/stations/{station_id}/qr`이며 프론트가 바로 표시할 수 있는 `svg_data_url`과 스캔용 `qr_payload`를 함께 반환한다. `TEST_MODE=false`로 실행하면 패널과 `/api/v1/test/*`는 404가 되고 기존 JWT·QR·기기 검증이 다시 적용된다.
+테스트 요청은 `X-Test-Role: admin|operator|driver`와 기사인 경우 `X-Test-Driver-Id` 헤더를 사용한다. 패널이 관리자 헤더를 자동으로 넣으므로 별도 로그인이 필요 없다. 기사 앱에는 테스트 메뉴나 가짜 스캔 버튼이 없으며, 관리자 패널이 발급한 SVG QR을 실제 카메라로 읽어야 정차가 완료된다. `TEST_MODE=false`이면 패널과 `/api/v1/test/*`는 404가 되고 기존 인증·기기 검증이 다시 적용된다.
 
-실행 중인 8765 테스트 서버에 관리자 QR 생성과 기사 도착·픽업·반납 흐름을 실제 HTTP로 검증하려면 `powershell -File scripts/verify_test_panel_http.ps1`을 실행한다.
+핵심 테스트 API:
 
-패널은 CSV를 요구하지 않는다. 코어 JSON은 `CorePayload`, `{"core": {...}}` 또는 기존 `PlanRequest` 형식을 지원하며, 대여소에 `available_bikes`와 `capacity`를 추가하면 해당 과거 시점의 초기 재고로 사용한다. 생략하면 테스트용 초기 재고를 `predicted_net_flow`에서 유도한다. `GET /api/v1/test/core-scenarios/sample`로 더미 JSON을 받고 `POST /api/v1/test/core-scenarios/plan`으로 기사 배정과 미션 발행을 한 번에 실행한다. 패널에 직접 입력한 TMAP 키는 `X-Test-Tmap-Key` 헤더와 공식 지도 SDK에만 전달되고 저장하지 않는다.
+| 용도 | API |
+|---|---|
+| 코어 모델 상태·날짜 | `GET /api/v1/test/core-model/status` |
+| 특정 날짜·회차 스냅샷 | `GET /api/v1/test/core-model/snapshot?date=2026-03-17&round_id=C` |
+| 랜덤 기사 시나리오 생성 | `POST /api/v1/test/scenarios` |
+| 현재 시나리오 복원 | `GET /api/v1/test/scenarios/current` |
+| 테스트폰 기사 연결·조회 | `PUT/GET /api/v1/test/devices/{device_id}/assignment` |
+| 기사 위치·도착 상태 | `GET /api/v1/test/drivers/{driver_id}/state` |
+| 다음 정차지 강제 이동 | `POST /api/v1/test/scenarios/{scenario_id}/drivers/{driver_id}/move-next` |
+| 현재 정차지 순차 QR | `GET /api/v1/test/scenarios/{scenario_id}/drivers/{driver_id}/qr-sequence` |
+
+코어 런타임은 PR #1에서 가져온 학습 가중치와 필수 `processed/` 산출물만 사용한다. 코어 상태 API가 체크포인트를 실제로 로드해 검증하고 이후 요청에서 같은 모델을 재사용한다. 날짜별 존재하는 회차만 패널 선택지로 제공하며 D 회차는 해당 서비스일의 **다음 날 03:00**으로 해석한다. 필요한 Python 패키지는 `numpy`, `pandas`, `pyarrow`, `torch`이며 `pyproject.toml`에 선언되어 있다. wheel 빌드에도 `Hosu/processed` 모델 산출물과 관리자 패널이 포함된다.
+
+PR 코어의 현재 데이터 한계도 API `limitations`와 패널에 그대로 노출한다. `available_bikes`는 실제 과거 재고가 아니라 매일 8대를 기준으로 관측 flow를 누적한 데모 복원값이고, 고장 의심 피처에는 전체 수집기간 집계값이 포함되어 과거 시점 성능평가에 사용할 수 없다. 따라서 현재 결과는 **실제 PR 모델을 이용한 시나리오·업무 흐름 검증용**이며, 실시간 전환이나 정확도 평가 전에는 시점별 실제 재고와 point-in-time 고장 피처로 교체해야 한다.
+
+테스트 시나리오·휴대폰 배정·강제 이동 상태는 의도적으로 프로세스 메모리에만 유지하며 서버 재시작 시 테스트 DB와 함께 초기화된다. 따라서 `TEST_MODE=true`에서는 Uvicorn을 단일 worker로 실행한다. 운영 모드의 미션·리워드 데이터에는 이 제한이 없다.
 
 ## 프론트엔드 연동
 

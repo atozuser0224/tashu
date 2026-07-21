@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Linking, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -19,21 +19,31 @@ import {
   DEFAULT_TMAP_APP_KEY,
 } from './src/config';
 import { createApiClient } from './src/services/api';
+import {
+  applyDriverBindingUrl,
+  loadInitialDriverBinding,
+  saveDriverBinding,
+  type DriverBinding,
+} from './src/services/driverBinding';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { MissionNavigationScreen } from './src/screens/MissionNavigationScreen';
 import { ProfileSetupScreen, type DriverProfile } from './src/screens/ProfileSetupScreen';
 import { RewardsScreen } from './src/screens/RewardsScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SplashScreen } from './src/screens/SplashScreen';
-import { colors, fonts } from './src/theme';
+import { colors } from './src/theme';
 import type { RewardTransaction, Wallet } from './src/types/api';
 
 type Gate = 'splash' | 'login' | 'profile' | 'app';
 
 const initialSettings = {
   apiBaseUrl: DEFAULT_API_BASE_URL,
-  driverId: DEFAULT_DRIVER_ID,
   tmapKey: DEFAULT_TMAP_APP_KEY,
+};
+
+const defaultBinding: DriverBinding = {
+  deviceId: DEFAULT_DEVICE_ID,
+  driverId: DEFAULT_DRIVER_ID,
 };
 
 export default function App() {
@@ -47,9 +57,10 @@ export default function App() {
   const [gate, setGate] = useState<Gate>('splash');
   const [profile, setProfile] = useState<DriverProfile | null>(null);
   const settings = initialSettings;
+  const [binding, setBinding] = useState<DriverBinding>(defaultBinding);
+  const [bindingReady, setBindingReady] = useState(false);
   const [section, setSection] = useState<AppSection>('mission');
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [refreshToken, setRefreshToken] = useState(0);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<RewardTransaction[]>([]);
   const [rewardsLoading, setRewardsLoading] = useState(false);
@@ -57,11 +68,85 @@ export default function App() {
   const api = useMemo(
     () => createApiClient({
       baseUrl: settings.apiBaseUrl,
-      driverId: settings.driverId,
-      deviceId: DEFAULT_DEVICE_ID,
+      driverId: binding.driverId,
+      deviceId: binding.deviceId,
     }),
-    [settings.apiBaseUrl, settings.driverId],
+    [binding.deviceId, binding.driverId, settings.apiBaseUrl],
   );
+
+  useEffect(() => {
+    let active = true;
+    void loadInitialDriverBinding(defaultBinding)
+      .then((next) => {
+        if (active) setBinding(next);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setBindingReady(true);
+      });
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      setBinding((current) => applyDriverBindingUrl(current, url));
+    });
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!bindingReady) return;
+    void saveDriverBinding(binding).catch(() => undefined);
+  }, [binding, bindingReady]);
+
+  useEffect(() => {
+    if (!bindingReady) return undefined;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const pollAssignment = async () => {
+      try {
+        const assignment = await api.getDeviceAssignment(binding.deviceId);
+        if (!active) return;
+        if (!assignment) {
+          setBinding((current) => current.planId || current.scenarioId || current.revision
+            ? { deviceId: current.deviceId, driverId: current.driverId }
+            : current);
+          return;
+        }
+        setBinding((current) => {
+          if (current.deviceId !== assignment.device_id) return current;
+          if (
+            current.driverId === assignment.driver_id
+            && current.planId === assignment.plan_id
+            && current.scenarioId === assignment.scenario_id
+            && current.revision === assignment.revision
+          ) return current;
+          return {
+            deviceId: assignment.device_id,
+            driverId: assignment.driver_id,
+            planId: assignment.plan_id,
+            scenarioId: assignment.scenario_id,
+            revision: assignment.revision,
+          };
+        });
+      } catch {
+        // An unassigned device keeps its URL or persisted fallback identity.
+      } finally {
+        if (active) timer = setTimeout(pollAssignment, 3_000);
+      }
+    };
+
+    void pollAssignment();
+    return () => {
+      active = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [api, binding.deviceId, bindingReady]);
+
+  useEffect(() => {
+    setWallet(null);
+    setTransactions([]);
+  }, [api]);
 
   const refreshRewards = useCallback(async () => {
     setRewardsLoading(true);
@@ -110,16 +195,18 @@ export default function App() {
       <View style={styles.safeArea}>
         {section === 'mission' ? (
           <MissionNavigationScreen
+            key={`${binding.driverId}:${binding.planId ?? ''}:${binding.revision ?? 0}`}
             api={api}
             tmapKey={settings.tmapKey}
-            refreshToken={refreshToken}
+            refreshToken={binding.revision ?? 0}
+            preferredPlanId={binding.planId}
             onMenu={() => setDrawerOpen(true)}
             onOpenRewards={() => selectSection('rewards')}
           />
         ) : null}
         {section === 'rewards' ? (
           <RewardsScreen
-            driverId={settings.driverId}
+            driverId={binding.driverId}
             wallet={wallet}
             transactions={transactions}
             loading={rewardsLoading}
@@ -137,7 +224,7 @@ export default function App() {
         <AppDrawer
           visible={drawerOpen}
           active={section}
-          driverId={settings.driverId}
+          driverId={binding.driverId}
           onClose={() => setDrawerOpen(false)}
           onSelect={selectSection}
           onLogout={logout}
@@ -148,12 +235,11 @@ export default function App() {
 
   if (!fontsLoaded) return <View style={styles.fontLoader} />;
 
-  const webPreview = Platform.OS === 'web';
   return (
     <SafeAreaProvider style={styles.provider}>
       <StatusBar style="dark" />
-      <View style={[styles.stage, webPreview && styles.webStage]}>
-        <View style={webPreview ? styles.webDevice : styles.device}>
+      <View style={styles.stage}>
+        <View style={styles.device}>
           <View
             style={styles.root}
             testID="ridego-app"
@@ -161,107 +247,17 @@ export default function App() {
           >
             {content}
           </View>
-          {webPreview ? <PrototypeStatusBar /> : null}
         </View>
       </View>
     </SafeAreaProvider>
   );
 }
 
-function PrototypeStatusBar() {
-  return (
-    <View pointerEvents="none" style={styles.prototypeStatus}>
-      <Text style={styles.prototypeTime}>11:32</Text>
-      <View style={styles.prototypeSignals}>
-        <View style={styles.signalBars}>
-          {[4, 7, 10, 13].map((height, index) => (
-            <View
-              key={height}
-              style={[styles.signalBar, { height, opacity: index === 3 ? 0.35 : 1 }]}
-            />
-          ))}
-        </View>
-        <Text style={styles.prototypeLte}>LTE</Text>
-        <View style={styles.battery}>
-          <View style={styles.batteryFill} />
-          <View style={styles.batteryTip} />
-        </View>
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  provider: { flex: 1, backgroundColor: '#D3CEC8' },
+  provider: { flex: 1, backgroundColor: colors.canvas },
   stage: { flex: 1, backgroundColor: colors.canvas },
-  webStage: {
-    minHeight: 896,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 26,
-    backgroundColor: '#D3CEC8',
-  },
   device: { flex: 1, overflow: 'hidden', backgroundColor: colors.paper },
-  webDevice: {
-    flexGrow: 0,
-    flexShrink: 0,
-    flexBasis: 844,
-    width: 390,
-    height: 844,
-    minHeight: 844,
-    maxHeight: 844,
-    overflow: 'hidden',
-    backgroundColor: colors.paper,
-    borderWidth: 11,
-    borderColor: '#0C0C0C',
-    borderRadius: 46,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 34 },
-    shadowOpacity: 0.38,
-    shadowRadius: 45,
-  },
   root: { flex: 1, backgroundColor: colors.canvas },
   safeArea: { flex: 1, backgroundColor: colors.paper },
   fontLoader: { flex: 1, backgroundColor: colors.orange },
-  prototypeStatus: {
-    position: 'absolute',
-    zIndex: 200,
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 54,
-    paddingTop: 14,
-    paddingHorizontal: 30,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  prototypeTime: {
-    color: colors.ink,
-    fontFamily: fonts.bold,
-    fontSize: 17,
-    letterSpacing: -0.34,
-  },
-  prototypeSignals: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  signalBars: { height: 13, flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
-  signalBar: { width: 3, borderRadius: 1, backgroundColor: colors.ink },
-  prototypeLte: { color: colors.ink, fontFamily: fonts.bold, fontSize: 13 },
-  battery: {
-    width: 23,
-    height: 14,
-    padding: 2,
-    borderWidth: 1.4,
-    borderColor: 'rgba(32,30,29,.45)',
-    borderRadius: 3,
-  },
-  batteryFill: { width: 16, height: 8, borderRadius: 1.5, backgroundColor: colors.ink },
-  batteryTip: {
-    position: 'absolute',
-    right: -4,
-    top: 3.5,
-    width: 2,
-    height: 5,
-    borderRadius: 1,
-    backgroundColor: 'rgba(32,30,29,.45)',
-  },
 });

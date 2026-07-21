@@ -18,8 +18,6 @@ type Props = {
   title: string;
   description: string;
   expectedCount?: number;
-  testCodes?: string[];
-  allowTestScan?: boolean;
   onComplete: (codes: string[]) => void;
   onClose: () => void;
 };
@@ -29,8 +27,6 @@ export function QrScannerModal({
   title,
   description,
   expectedCount = 1,
-  testCodes = [],
-  allowTestScan = true,
   onComplete,
   onClose,
 }: Props) {
@@ -127,15 +123,6 @@ export function QrScannerModal({
   };
 
   const handleBarcode = ({ data }: BarcodeScanningResult) => capture(data);
-  const completeTest = () => {
-    if (scanLockedRef.current || completionLockedRef.current) return;
-    const generated = Array.from({ length: expectedCount }, (_, index) =>
-      testCodes[index] ?? `RIDEGO-TEST-QR-${Date.now()}-${index + 1}`,
-    );
-    codesRef.current = generated;
-    setCodes(generated);
-    scheduleComplete(generated);
-  };
 
   const close = () => {
     visibleRef.current = false;
@@ -217,19 +204,7 @@ export function QrScannerModal({
           )}
         </View>
 
-        {!completed ? (
-          <View style={styles.footer}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="QR 촬영"
-              disabled={!allowTestScan || paused}
-              onPress={completeTest}
-              style={[styles.shutterOuter, paused && styles.shutterDisabled]}
-            >
-              <View style={styles.shutterInner} />
-            </Pressable>
-          </View>
-        ) : <View style={styles.footerSpacer} />}
+        <View style={styles.footerSpacer} />
       </SafeAreaView>
   );
 
@@ -290,16 +265,5 @@ const styles = StyleSheet.create({
   },
   completeTitle: { marginTop: 20, color: '#FFFFFF', fontSize: 21, fontWeight: '800', letterSpacing: -0.5 },
   completeCount: { marginTop: 7, color: 'rgba(255,255,255,.58)', fontSize: 12, fontWeight: '600' },
-  footer: { alignItems: 'center', paddingHorizontal: 30, paddingBottom: Platform.OS === 'web' ? 42 : 20 },
   footerSpacer: { height: 118 },
-  shutterOuter: {
-    width: 78, height: 78, borderRadius: 39, borderWidth: 4, borderColor: 'rgba(255,255,255,.86)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  shutterInner: {
-    width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFFFFF',
-    shadowColor: '#000000', shadowOpacity: .4, shadowRadius: 7, shadowOffset: { width: 0, height: 4 }, elevation: 8,
-  },
-  shutterDisabled: { opacity: .38 },
-  testHint: { marginTop: 14, maxWidth: 300, color: 'rgba(255,255,255,.48)', fontSize: 10, lineHeight: 15, fontWeight: '600', textAlign: 'center' },
 });

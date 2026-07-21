@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import io
 import json
 import os
+import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated, Callable
 from urllib.parse import quote
@@ -26,6 +29,12 @@ from app.auth_models import (
     LogoutRequest,
     RefreshTokenRequest,
     UserResponse,
+)
+from app.core_model import (
+    CoreModelAdapter,
+    CoreModelError,
+    CoreModelSnapshot,
+    CoreModelStatus,
 )
 from app.models import (
     HealthResponse,
@@ -75,7 +84,17 @@ from app.planner import create_plan
 from app.tashu import TashuApiError, TashuClient
 from app.test_scenario import (
     CoreTestScenarioRequest,
+    CreateTestScenarioRequest,
+    TestDeviceAssignment,
+    TestDeviceBindingRequest,
+    TestForcedArrival,
+    TestQrItem,
+    TestQrSequence,
+    TestScenarioResponse,
+    TestScenarioRuntime,
     TestTmapConfig,
+    TEST_TMAP_APP_KEY,
+    build_scenario_plan_request,
     build_test_plan_request,
     create_sample_core_scenario,
 )
@@ -87,10 +106,16 @@ from app.travel import TravelNode, driver_node_id, station_node_id
 async def lifespan(app: FastAPI):
     app.state.tashu_client = TashuClient()
     app.state.tmap_client = TmapClient()
+    app.state.test_tmap_client = TmapClient(app_key=TEST_TMAP_APP_KEY)
+    app.state.core_model = CoreModelAdapter()
+    app.state.test_scenarios = TestScenarioRuntime()
+    app.state.scenario_creation_lock = asyncio.Lock()
     app.state.test_mode = os.getenv("TEST_MODE", "true").lower() == "true"
     database_path = os.getenv("TASHU_DB_PATH", "data/tashu.db")
     app.state.operation_store = OperationStore(database_path)
     app.state.auth_store = AuthStore(database_path)
+    if app.state.test_mode:
+        app.state.operation_store.reset_test_data()
     try:
         yield
     finally:
@@ -100,7 +125,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="타슈 다중 기사 재배치 API",
-    version="0.8.0",
+    version="0.9.0",
     description=(
         "core ST-GNN 예측과 타슈 실시간 재고를 결합해 기사별 동선을 배정하고, "
         "기사 미션 수행과 포인트 리워드까지 관리합니다."
@@ -178,7 +203,10 @@ AnyPrincipal = Annotated[AuthPrincipal, Depends(current_principal)]
 async def test_panel() -> HTMLResponse:
     _require_test_mode()
     panel_path = Path(__file__).with_name("test_panel.html")
-    return HTMLResponse(panel_path.read_text(encoding="utf-8"))
+    return HTMLResponse(
+        panel_path.read_text(encoding="utf-8"),
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @app.get("/api/v1/test/status", tags=["test-mode"])
@@ -187,8 +215,12 @@ async def test_mode_status() -> dict:
     return {
         "test_mode": True,
         "authentication_bypassed": True,
-        "external_calls_simulated": True,
+        "external_calls_simulated": False,
+        "tmap_mode": "real_external_api_with_distance_fallback",
+        "core_model_mode": "pinned_pr_artifacts",
+        "historical_inventory_mode": "synthetic_reconstruction",
         "panel_url": "/test-panel",
+        "driver_app_url": os.getenv("TEST_DRIVER_APP_URL"),
     }
 
 
@@ -196,6 +228,7 @@ async def test_mode_status() -> dict:
 async def reset_test_mode() -> dict:
     _require_test_mode()
     _operation_call(app.state.operation_store.reset_test_data)
+    app.state.test_scenarios.reset()
     return {"reset": True}
 
 
@@ -242,7 +275,7 @@ async def get_sample_core_scenario(_: AdminPrincipal) -> CoreTestScenarioRequest
 )
 async def get_test_tmap_config(_: AdminPrincipal) -> TestTmapConfig:
     _require_test_mode()
-    app_key = app.state.tmap_client.app_key
+    app_key = app.state.test_tmap_client.app_key
     return TestTmapConfig(
         configured=bool(app_key),
         sdk_url=(
@@ -252,6 +285,229 @@ async def get_test_tmap_config(_: AdminPrincipal) -> TestTmapConfig:
             else None
         ),
     )
+
+
+@app.get(
+    "/api/v1/test/core-model/status",
+    response_model=CoreModelStatus,
+    tags=["test-mode"],
+)
+async def get_core_model_status(_: AdminPrincipal) -> CoreModelStatus:
+    _require_test_mode()
+    try:
+        await asyncio.to_thread(app.state.core_model.load)
+    except CoreModelError:
+        pass
+    return app.state.core_model.status()
+
+
+@app.get(
+    "/api/v1/test/core-model/snapshot",
+    response_model=CoreModelSnapshot,
+    tags=["test-mode"],
+)
+async def get_core_model_snapshot(
+    _: AdminPrincipal,
+    date: str = Query(pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    round_id: str = Query(pattern=r"^[ABCDabcd]$"),
+) -> CoreModelSnapshot:
+    _require_test_mode()
+    try:
+        return await asyncio.to_thread(
+            app.state.core_model.snapshot,
+            date,
+            round_id,
+        )
+    except CoreModelError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post(
+    "/api/v1/test/scenarios",
+    response_model=TestScenarioResponse,
+    tags=["test-mode"],
+)
+async def create_test_scenario(
+    request: CreateTestScenarioRequest,
+    principal: AdminPrincipal,
+) -> TestScenarioResponse:
+    """Create one reproducible historical scenario and publish its missions."""
+
+    _require_test_mode()
+    resolved_core = None
+    if request.core_model is not None:
+        try:
+            snapshot = await asyncio.to_thread(
+                app.state.core_model.snapshot,
+                request.core_model.date.isoformat(),
+                request.core_model.round_id,
+            )
+        except CoreModelError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        resolved_core = snapshot.core
+        # The selected core frame is the source of truth for the simulated time.
+        request = request.model_copy(update={"assumed_at": snapshot.assumed_at})
+
+    try:
+        built = build_scenario_plan_request(request, resolved_core)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    async with app.state.scenario_creation_lock:
+        _operation_call(app.state.operation_store.reset_test_data)
+        app.state.test_scenarios.reset()
+        plan = await plan_rebalancing(
+            built.plan_request,
+            principal,
+            TEST_TMAP_APP_KEY,
+        )
+        scenario = TestScenarioResponse(
+            scenario_id=f"scenario-{uuid.uuid4().hex[:12]}",
+            assumed_at=request.assumed_at,
+            random_seed=built.random_seed,
+            created_at=datetime.now(timezone.utc),
+            drivers=list(built.drivers),
+            plan=plan,
+        )
+        scenario = app.state.test_scenarios.set_scenario(scenario)
+        _initialize_test_driver_states(scenario)
+        return scenario
+
+
+@app.get(
+    "/api/v1/test/scenarios/current",
+    response_model=TestScenarioResponse,
+    tags=["test-mode"],
+)
+async def get_current_test_scenario(_: AdminPrincipal) -> TestScenarioResponse:
+    _require_test_mode()
+    scenario = app.state.test_scenarios.get_scenario()
+    if scenario is None:
+        raise HTTPException(status_code=404, detail="활성 테스트 시나리오가 없습니다.")
+    return scenario
+
+
+@app.put(
+    "/api/v1/test/devices/{device_id}/assignment",
+    response_model=TestDeviceAssignment,
+    tags=["test-mode"],
+)
+async def bind_test_device(
+    device_id: str,
+    request: TestDeviceBindingRequest,
+    _: AdminPrincipal,
+) -> TestDeviceAssignment:
+    _require_test_mode()
+    scenario = app.state.test_scenarios.get_scenario()
+    if scenario is None:
+        raise HTTPException(status_code=404, detail="활성 테스트 시나리오가 없습니다.")
+    if _test_driver_mission(scenario, request.driver_id) is None:
+        raise HTTPException(
+            status_code=409,
+            detail="배정 미션이 없는 대기 기사는 테스트폰에 연결할 수 없습니다.",
+        )
+    try:
+        return app.state.test_scenarios.bind_device(
+            device_id,
+            scenario.scenario_id,
+            request.driver_id,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get(
+    "/api/v1/test/devices/{device_id}/assignment",
+    response_model=TestDeviceAssignment | None,
+    tags=["test-mode"],
+)
+async def get_test_device_assignment(device_id: str) -> TestDeviceAssignment | None:
+    _require_test_mode()
+    return app.state.test_scenarios.get_assignment(device_id)
+
+
+@app.get(
+    "/api/v1/test/drivers/{driver_id}/state",
+    response_model=TestForcedArrival,
+    tags=["test-mode"],
+)
+async def get_test_driver_state(driver_id: str) -> TestForcedArrival:
+    _require_test_mode()
+    return _current_test_driver_state(driver_id)
+
+
+@app.post(
+    "/api/v1/test/scenarios/{scenario_id}/drivers/{driver_id}/move-next",
+    response_model=TestForcedArrival,
+    tags=["test-mode"],
+)
+async def force_test_driver_to_next_stop(
+    scenario_id: str,
+    driver_id: str,
+    _: AdminPrincipal,
+) -> TestForcedArrival:
+    _require_test_mode()
+    scenario = _require_test_scenario(scenario_id)
+    mission = _test_driver_mission(scenario, driver_id)
+    if mission is None:
+        raise HTTPException(status_code=404, detail="이 기사에게 배정된 미션이 없습니다.")
+    store: OperationStore = app.state.operation_store
+    if mission.status == "offered":
+        mission = _operation_call(store.accept_mission, mission.mission_id, driver_id)
+    if mission.status == "accepted":
+        mission = _operation_call(store.start_mission, mission.mission_id, driver_id)
+    next_stop = next((stop for stop in mission.stops if stop.status == "pending"), None)
+    if next_stop is None:
+        raise HTTPException(status_code=409, detail="이 미션에 남은 정차지가 없습니다.")
+    now = datetime.now(timezone.utc)
+    _operation_call(
+        store.record_driver_location,
+        driver_id,
+        next_stop.location,
+        now,
+        3,
+        0,
+        f"test-admin-{driver_id}",
+    )
+    return app.state.test_scenarios.set_movement_state(
+        scenario_id,
+        driver_id,
+        mission_id=mission.mission_id,
+        mission_status=mission.status,
+        current_location=next_stop.location,
+        next_stop=next_stop,
+        arrived=True,
+    )
+
+
+@app.get(
+    "/api/v1/test/scenarios/{scenario_id}/drivers/{driver_id}/qr-sequence",
+    response_model=TestQrSequence,
+    tags=["test-mode"],
+)
+async def get_test_qr_sequence(
+    scenario_id: str,
+    driver_id: str,
+    _: AdminPrincipal,
+) -> TestQrSequence:
+    _require_test_mode()
+    scenario = _require_test_scenario(scenario_id)
+    state = _current_test_driver_state(driver_id)
+    if not state.arrived or state.next_stop is None or state.mission_id is None:
+        raise HTTPException(
+            status_code=409,
+            detail="먼저 기사를 현재 정차지로 강제 이동하세요.",
+        )
+    cached = app.state.test_scenarios.get_qr_sequence(
+        scenario_id,
+        state.mission_id,
+        state.next_stop.sequence,
+    )
+    if cached is not None:
+        return cached
+    mission = _operation_call(app.state.operation_store.get_mission, state.mission_id)
+    sequence = _build_test_qr_sequence(scenario, mission, state.next_stop)
+    return app.state.test_scenarios.cache_qr_sequence(sequence)
 
 
 @app.post(
@@ -268,7 +524,11 @@ async def plan_test_core_scenario(
 ) -> PlanResponse:
     _require_test_mode()
     planning_request = build_test_plan_request(request)
-    return await plan_rebalancing(planning_request, principal, x_test_tmap_key)
+    return await plan_rebalancing(
+        planning_request,
+        principal,
+        x_test_tmap_key or TEST_TMAP_APP_KEY,
+    )
 
 
 @app.post(
@@ -284,17 +544,10 @@ async def create_test_station_qr(
     provisioned = _operation_call(
         app.state.operation_store.provision_station_qr, station_id, None
     )
-    qr = qrcode.QRCode(version=None, box_size=8, border=3)
-    qr.add_data(provisioned.qr_payload)
-    qr.make(fit=True)
-    image = qr.make_image(image_factory=SvgPathImage)
-    output = io.BytesIO()
-    image.save(output)
-    encoded = base64.b64encode(output.getvalue()).decode()
     return TestStationQrResponse(
         station_id=station_id,
         qr_payload=provisioned.qr_payload,
-        svg_data_url=f"data:image/svg+xml;base64,{encoded}",
+        svg_data_url=_qr_svg_data_url(provisioned.qr_payload),
     )
 
 
@@ -396,7 +649,11 @@ async def plan_rebalancing(
 
     tmap_client: TmapClient = app.state.tmap_client
     if app.state.test_mode and x_test_tmap_key:
-        tmap_client = TmapClient(app_key=x_test_tmap_key)
+        tmap_client = (
+            app.state.test_tmap_client
+            if x_test_tmap_key == TEST_TMAP_APP_KEY
+            else TmapClient(app_key=x_test_tmap_key)
+        )
     travel_matrix = None
     if request.options.use_tmap_planning_matrix:
         if tmap_client.configured:
@@ -1085,6 +1342,207 @@ async def list_audit_logs(
 )
 async def operations_analytics(_: OperatorPrincipal) -> OperationsAnalytics:
     return _operation_call(app.state.operation_store.analytics)
+
+
+def _require_test_scenario(scenario_id: str | None = None) -> TestScenarioResponse:
+    scenario = app.state.test_scenarios.get_scenario(scenario_id)
+    if scenario is None:
+        raise HTTPException(status_code=404, detail="활성 테스트 시나리오가 없습니다.")
+    return scenario
+
+
+def _test_driver_mission(
+    scenario: TestScenarioResponse,
+    driver_id: str,
+) -> MissionDetail | None:
+    if not any(driver.driver_id == driver_id for driver in scenario.drivers):
+        raise HTTPException(status_code=404, detail="시나리오 기사를 찾을 수 없습니다.")
+    summaries = _operation_call(
+        app.state.operation_store.list_missions,
+        driver_id=driver_id,
+    ).missions
+    summary = next(
+        (item for item in summaries if item.plan_id == scenario.plan.plan_id),
+        None,
+    )
+    if summary is None:
+        return None
+    return _operation_call(app.state.operation_store.get_mission, summary.mission_id)
+
+
+def _initialize_test_driver_states(scenario: TestScenarioResponse) -> None:
+    for driver in scenario.drivers:
+        mission = _test_driver_mission(scenario, driver.driver_id)
+        next_stop = (
+            next((stop for stop in mission.stops if stop.status == "pending"), None)
+            if mission is not None
+            else None
+        )
+        app.state.test_scenarios.set_movement_state(
+            scenario.scenario_id,
+            driver.driver_id,
+            mission_id=mission.mission_id if mission else None,
+            mission_status=mission.status if mission else None,
+            current_location=driver.start_location,
+            next_stop=next_stop,
+            arrived=False,
+        )
+
+
+def _current_test_driver_state(driver_id: str) -> TestForcedArrival:
+    scenario = _require_test_scenario()
+    driver = next(
+        (item for item in scenario.drivers if item.driver_id == driver_id),
+        None,
+    )
+    if driver is None:
+        raise HTTPException(status_code=404, detail="시나리오 기사를 찾을 수 없습니다.")
+    mission = _test_driver_mission(scenario, driver_id)
+    cached = app.state.test_scenarios.get_movement_state(
+        scenario.scenario_id,
+        driver_id,
+    )
+    next_stop = (
+        next((stop for stop in mission.stops if stop.status == "pending"), None)
+        if mission is not None
+        else None
+    )
+    arrived = bool(
+        cached
+        and cached.arrived
+        and mission is not None
+        and cached.mission_id == mission.mission_id
+        and cached.next_stop is not None
+        and next_stop is not None
+        and cached.next_stop.sequence == next_stop.sequence
+    )
+    return TestForcedArrival(
+        scenario_id=scenario.scenario_id,
+        driver_id=driver_id,
+        mission_id=mission.mission_id if mission else None,
+        mission_status=mission.status if mission else None,
+        current_location=(cached.current_location if cached else driver.start_location),
+        next_stop=next_stop,
+        arrived=arrived,
+        movement_version=cached.movement_version if cached else 0,
+    )
+
+
+def _build_test_qr_sequence(
+    scenario: TestScenarioResponse,
+    mission: MissionDetail,
+    stop,
+) -> TestQrSequence:
+    payloads: list[tuple[str, str, str | None, str | None]] = []
+    if stop.action == "pickup":
+        codes = _test_bike_codes(
+            scenario.scenario_id,
+            mission.mission_id,
+            stop.sequence,
+            stop.planned_quantity,
+        )
+        payloads.extend(
+            ("bike", code, code.rsplit(":", 1)[-1], None) for code in codes
+        )
+    else:
+        provisioned = _operation_call(
+            app.state.operation_store.provision_station_qr,
+            stop.station_id,
+            None,
+        )
+        payloads.append(("station", provisioned.qr_payload, None, stop.station_id))
+        loaded_codes: list[str] = []
+        for previous in mission.stops:
+            if previous.sequence >= stop.sequence:
+                break
+            if previous.action == "pickup":
+                if previous.status != "completed":
+                    continue
+                pickup_quantity = previous.actual_quantity or 0
+                loaded_codes.extend(
+                    _test_bike_codes(
+                        scenario.scenario_id,
+                        mission.mission_id,
+                        previous.sequence,
+                        previous.planned_quantity,
+                    )[:pickup_quantity]
+                )
+            elif previous.status == "completed":
+                loaded_codes = loaded_codes[(previous.actual_quantity or 0) :]
+        drop_codes = loaded_codes[: stop.planned_quantity]
+        if len(drop_codes) != stop.planned_quantity:
+            raise HTTPException(
+                status_code=409,
+                detail="현재 차량 적재 QR을 구성할 수 없습니다. 앞선 회수 정차를 완료하세요.",
+            )
+        payloads.extend(
+            ("bike", code, code.rsplit(":", 1)[-1], None) for code in drop_codes
+        )
+
+    total = len(payloads)
+    items = [
+        TestQrItem(
+            qr_id=(
+                f"{scenario.scenario_id}:{mission.mission_id}:"
+                f"{stop.sequence}:{index}"
+            ),
+            kind=kind,
+            label=(
+                f"{stop.station_name} 대여소 QR"
+                if kind == "station"
+                else f"자전거 QR {index}/{total}"
+            ),
+            payload=payload,
+            svg_data_url=_qr_svg_data_url(payload),
+            mission_id=mission.mission_id,
+            stop_sequence=stop.sequence,
+            ordinal=index,
+            total=total,
+            station_id=station_id,
+            bike_id=bike_id,
+        )
+        for index, (kind, payload, bike_id, station_id) in enumerate(
+            payloads,
+            start=1,
+        )
+    ]
+    return TestQrSequence(
+        scenario_id=scenario.scenario_id,
+        driver_id=mission.driver_id,
+        mission_id=mission.mission_id,
+        stop_sequence=stop.sequence,
+        stop_action=stop.action,
+        items=items,
+    )
+
+
+def _test_bike_codes(
+    scenario_id: str,
+    mission_id: str,
+    stop_sequence: int,
+    quantity: int,
+) -> list[str]:
+    runtime: TestScenarioRuntime = app.state.test_scenarios
+    cached = runtime.get_bike_codes(scenario_id, mission_id, stop_sequence)
+    if cached:
+        return cached
+    codes = [
+        f"TASHU-TEST-BIKE:{scenario_id}:{mission_id}:{stop_sequence}:{index}"
+        for index in range(1, quantity + 1)
+    ]
+    runtime.cache_bike_codes(scenario_id, mission_id, stop_sequence, codes)
+    return codes
+
+
+def _qr_svg_data_url(payload: str) -> str:
+    qr = qrcode.QRCode(version=None, box_size=8, border=3)
+    qr.add_data(payload)
+    qr.make(fit=True)
+    image = qr.make_image(image_factory=SvgPathImage)
+    output = io.BytesIO()
+    image.save(output)
+    encoded = base64.b64encode(output.getvalue()).decode()
+    return f"data:image/svg+xml;base64,{encoded}"
 
 
 def _operation_call(function, *args, **kwargs):

@@ -1,13 +1,21 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "tashu-rebalancing-server"
-version = "0.8.0"
+version = "0.9.0"
 description = "Multi-driver bike rebalancing API for Daejeon Tashu"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115,<1",
   "httpx>=0.27,<1",
+  "numpy>=2,<3",
+  "pandas>=2.2,<4",
+  "pyarrow>=15,<26",
   "pydantic>=2.10,<3",
   "qrcode>=8,<9",
+  "torch>=2.2,<3",
   "uvicorn[standard]>=0.30,<1",
 ]
 
@@ -17,3 +25,11 @@ dev = ["pytest>=8,<10", "pytest-asyncio>=0.23,<2"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+[tool.setuptools.packages.find]
+include = ["app*", "Hosu*"]
+exclude = ["data*", "examples*", "tests*"]
+
+[tool.setuptools.package-data]
+app = ["test_panel.html"]
+Hosu = ["README.md", "processed/*"]

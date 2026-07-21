@@ -25,7 +25,7 @@ import {
   savePendingBikeStop,
   type PendingBikeStop,
 } from '../services/bikeInventory';
-import type { Coordinate, MissionDetail, MissionStop } from '../types/api';
+import type { Coordinate, MissionDetail, MissionStop, TestDriverState } from '../types/api';
 
 type Props = {
   api: ApiClient;
@@ -38,7 +38,7 @@ type Props = {
 
 type ScanJob =
   | { kind: 'pickup'; stop: MissionStop; location: Coordinate }
-  | { kind: 'dropoff-station'; stop: MissionStop; location: Coordinate; qrPayload: string; challengeId: string }
+  | { kind: 'dropoff-station'; stop: MissionStop; location: Coordinate; challengeId: string }
   | { kind: 'dropoff-bikes'; stop: MissionStop; location: Coordinate }
   | { kind: 'inventory-recovery'; expectedCount: number };
 
@@ -53,6 +53,7 @@ export function MissionNavigationScreen({ api, tmapKey, refreshToken, preferredP
   const [recoveryBlocked, setRecoveryBlocked] = useState(false);
   const [inventoryMismatch, setInventoryMismatch] = useState<number | null>(null);
   const [noMissionDismissed, setNoMissionDismissed] = useState(false);
+  const [driverState, setDriverState] = useState<TestDriverState | null>(null);
 
   const loadMission = useCallback(async () => {
     setLoading(true); setError(null); setRecoveryBlocked(true); setInventoryMismatch(null);
@@ -113,8 +114,85 @@ export function MissionNavigationScreen({ api, tmapKey, refreshToken, preferredP
 
   useEffect(() => { void loadMission(); }, [loadMission, refreshToken]);
   useEffect(() => { if (mission) setNoMissionDismissed(false); }, [mission]);
+  useEffect(() => {
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const pollDriverState = async () => {
+      try {
+        const next = await api.getTestDriverState();
+        if (active) {
+          setDriverState((current) => sameDriverState(current, next) ? current : next);
+        }
+      } catch (cause) {
+        if (cause instanceof ApiError && cause.status === 404 && active) {
+          setDriverState(null);
+          setMission(null);
+        }
+      } finally {
+        if (active) timer = setTimeout(pollDriverState, 3_000);
+      }
+    };
+
+    setDriverState(null);
+    void pollDriverState();
+    return () => {
+      active = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [api, refreshToken]);
+  useEffect(() => {
+    const localStopSequence = mission?.stops.find((stop) => stop.status === 'pending')?.sequence;
+    if (driverState?.mission_id && (
+      mission?.mission_id !== driverState.mission_id
+      || (driverState.mission_status && mission.status !== driverState.mission_status)
+      || localStopSequence !== driverState.next_stop?.sequence
+    )) {
+      void loadMission();
+    }
+  }, [
+    driverState?.mission_id,
+    driverState?.mission_status,
+    driverState?.movement_version,
+    driverState?.next_stop?.sequence,
+    loadMission,
+    mission,
+  ]);
+  useEffect(() => {
+    let active = true;
+
+    const requestLocationPermission = async () => {
+      try {
+        const current = await Location.getForegroundPermissionsAsync();
+        const permission = current.granted
+          ? current
+          : await Location.requestForegroundPermissionsAsync();
+        if (active && !permission.granted) {
+          setError('경로 안내를 위해 위치 권한을 허용해 주세요.');
+        }
+      } catch {
+        if (active) {
+          setError('브라우저에서 위치 권한을 사용할 수 없습니다.');
+        }
+      }
+    };
+
+    void requestLocationPermission();
+    return () => { active = false; };
+  }, []);
 
   const currentStop = mission?.stops.find((stop) => stop.status === 'pending') ?? null;
+  const currentDriverLocation = driverState?.driver_id === api.driverId
+    ? driverState.current_location
+    : null;
+  const arrivedAtCurrentStop = Boolean(
+    mission
+    && currentStop
+    && currentDriverLocation
+    && driverState?.mission_id === mission.mission_id
+    && driverState.arrived
+    && driverState.next_stop?.sequence === currentStop.sequence,
+  );
   const routeCoordinates = useMemo(() => {
     if (!mission) return [];
     const road = mission.route.navigation?.coordinates ?? [];
@@ -122,7 +200,7 @@ export function MissionNavigationScreen({ api, tmapKey, refreshToken, preferredP
   }, [mission]);
   const routes: MapRoute[] = mission ? [{ id: mission.driver_id, color: mission.route.route_color || '#F7941D', coordinates: routeCoordinates }] : [];
   const markers: MapPoint[] = mission ? [
-    { ...mission.route.start_location, label: '기사', kind: 'driver' as const },
+    { ...(currentDriverLocation ?? mission.route.start_location), label: '기사', kind: 'driver' as const },
     ...mission.stops.map((stop) => ({ ...stop.location, label: `${stop.sequence}`, kind: stop.action as 'pickup' | 'dropoff' })),
   ] : [];
 
@@ -144,23 +222,25 @@ export function MissionNavigationScreen({ api, tmapKey, refreshToken, preferredP
     }
     setBusy(useRealGps ? 'gps' : 'arrive'); setError(null);
     try {
-      let location = stop.location;
+      let location: Coordinate;
       if (useRealGps) {
         const permission = await Location.requestForegroundPermissionsAsync();
         if (!permission.granted) throw new Error('실제 위치 확인을 위해 위치 권한이 필요합니다.');
         const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
         location = { lat: current.coords.latitude, lng: current.coords.longitude };
+        await api.reportLocation(location, { accuracyMeters: 15 });
+      } else {
+        if (!arrivedAtCurrentStop || !currentDriverLocation) {
+          throw new Error('현재 정차 지점에 도착한 뒤 QR을 확인해 주세요.');
+        }
+        location = currentDriverLocation;
       }
-      await api.reportLocation(location, { accuracyMeters: useRealGps ? 15 : 3 });
       if (stop.action === 'pickup') {
         setScanJob({ kind: 'pickup', stop, location });
       } else {
         if (bikeCodes.length < stop.planned_quantity) throw new Error(`차량에 적재된 QR이 ${bikeCodes.length}개뿐입니다. 앞선 회수 정차를 확인하세요.`);
-        const [stationQr, challenge] = await Promise.all([
-          api.createStationQr(stop.station_id),
-          api.createQrChallenge(mission.mission_id, stop.sequence),
-        ]);
-        setScanJob({ kind: 'dropoff-station', stop, location, qrPayload: stationQr.qr_payload, challengeId: challenge.challenge_id });
+        const challenge = await api.createQrChallenge(mission.mission_id, stop.sequence);
+        setScanJob({ kind: 'dropoff-station', stop, location, challengeId: challenge.challenge_id });
       }
     } catch (cause) { setError(messageOf(cause)); }
     finally { setBusy(null); }
@@ -342,7 +422,7 @@ export function MissionNavigationScreen({ api, tmapKey, refreshToken, preferredP
     : bikeCodes.length;
   const mapRoutes = routes.map((route) => ({ ...route, color: accent }));
   const mapMarkers: MapPoint[] = mission ? [
-    { ...mission.route.start_location, label: '현재 위치', kind: 'driver' },
+    { ...(currentDriverLocation ?? mission.route.start_location), label: '현재 위치', kind: 'driver' },
     ...(displayStop ? [{
       ...displayStop.location,
       label: displayStop.action === 'pickup' ? '회수 지점' : displayStop.station_name,
@@ -375,7 +455,7 @@ export function MissionNavigationScreen({ api, tmapKey, refreshToken, preferredP
             ? 'gift'
             : 'qr-code';
   const cardActionDisabled = loading || busy !== null
-    || (mission?.status === 'in_progress' && !currentStop && !recoveryBlocked);
+    || (mission?.status === 'in_progress' && (!currentStop || !arrivedAtCurrentStop) && !recoveryBlocked);
 
   const handleCardAction = () => {
     if (loading || busy !== null) return;
@@ -547,12 +627,6 @@ export function MissionNavigationScreen({ api, tmapKey, refreshToken, preferredP
         expectedCount={!scanJob ? 1 : scanJob.kind === 'inventory-recovery'
           ? scanJob.expectedCount
           : scanJob.kind === 'dropoff-station' ? 1 : scanJob.stop.planned_quantity}
-        testCodes={!scanJob || scanJob.kind === 'inventory-recovery' ? [] : scanJob.kind === 'pickup'
-          ? Array.from({ length: scanJob.stop.planned_quantity }, (_, index) => `BIKE-${mission?.mission_id}-${scanJob.stop.sequence}-${index + 1}`)
-          : scanJob.kind === 'dropoff-station'
-            ? [scanJob.qrPayload]
-            : bikeCodes.slice(0, scanJob.stop.planned_quantity)}
-        allowTestScan={scanJob?.kind !== 'inventory-recovery'}
         onComplete={completeScan}
         onClose={() => setScanJob(null)}
       />
@@ -685,6 +759,18 @@ function expectedVehicleLoad(mission: MissionDetail) {
     const quantity = stop.actual_quantity ?? 0;
     return stop.action === 'pickup' ? load + quantity : Math.max(0, load - quantity);
   }, 0);
+}
+
+function sameDriverState(current: TestDriverState | null, next: TestDriverState) {
+  return current?.scenario_id === next.scenario_id
+    && current.driver_id === next.driver_id
+    && current.mission_id === next.mission_id
+    && current.mission_status === next.mission_status
+    && current.arrived === next.arrived
+    && current.movement_version === next.movement_version
+    && current.next_stop?.sequence === next.next_stop?.sequence
+    && current.current_location?.lat === next.current_location?.lat
+    && current.current_location?.lng === next.current_location?.lng;
 }
 
 function messageOf(cause: unknown) {

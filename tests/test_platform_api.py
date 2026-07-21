@@ -272,8 +272,13 @@ def test_test_mode_panel_bypasses_security_and_resets(monkeypatch):
     with TestClient(app) as client:
         panel = client.get("/test-panel")
         assert panel.status_code == 200
-        assert 'id="coreFile"' in panel.text
+        assert panel.headers["cache-control"] == "no-store"
+        assert 'id="scenarioDate"' in panel.text
+        assert 'id="roundId"' in panel.text
         assert 'id="tmapMap"' in panel.text
+        assert "https://apis.openapi.sk.com/tmap/jsv2" in panel.text
+        assert "httpsMode:true" in panel.text
+        assert "document.createElement('script')" not in panel.text
         status = client.get("/api/v1/test/status").json()
         assert status["authentication_bypassed"] is True
 

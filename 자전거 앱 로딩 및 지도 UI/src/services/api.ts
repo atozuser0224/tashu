@@ -12,6 +12,8 @@ import type {
   RewardTransaction,
   RewardTransactionListResponse,
   StationQr,
+  TestDeviceAssignment,
+  TestDriverState,
   Wallet,
 } from "../types/api";
 
@@ -44,7 +46,7 @@ export interface CompleteStopInput {
 
 interface RequestOptions {
   method?: "GET" | "POST";
-  role: "admin" | "driver";
+  role: "admin" | "driver" | "test";
   body?: unknown;
   headers?: Record<string, string>;
 }
@@ -124,6 +126,20 @@ export class ApiClient {
   bootstrap(): Promise<OperationsBootstrap> {
     return this.request<OperationsBootstrap>(
       `/api/v1/operations/bootstrap?driver_id=${encodeURIComponent(this.driverId)}`,
+      { role: "driver" },
+    );
+  }
+
+  getDeviceAssignment(deviceId = this.deviceId): Promise<TestDeviceAssignment | null> {
+    return this.request<TestDeviceAssignment | null>(
+      `/api/v1/test/devices/${encodeURIComponent(deviceId)}/assignment`,
+      { role: "test" },
+    );
+  }
+
+  getTestDriverState(): Promise<TestDriverState> {
+    return this.request<TestDriverState>(
+      `/api/v1/test/drivers/${encodeURIComponent(this.driverId)}/state`,
       { role: "driver" },
     );
   }
@@ -282,13 +298,14 @@ export class ApiClient {
     const url = `${this.baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
     const headers: Record<string, string> = {
       Accept: "application/json",
+      "ngrok-skip-browser-warning": "true",
       ...(options.body === undefined ? {} : { "Content-Type": "application/json" }),
       ...(options.role === "admin"
         ? { "X-Test-Role": "admin" }
-        : {
+        : options.role === "driver" ? {
             "X-Test-Role": "driver",
             "X-Test-Driver-Id": this.driverId,
-          }),
+          } : {}),
       ...options.headers,
     };
 
