@@ -12,7 +12,7 @@
 미리 로드(서버 起動시 1회): load_artifacts() -> 이후 요청마다 재사용 (빠름)
 """
 import pandas as pd, numpy as np, json, torch
-from model import A3TGCN
+from model import A3TGCN_Dir as A3TGCN
 
 OUT_DIR="processed"
 ROUND_TIME={'A':'07:00','B':'11:30','C':'16:00','D':'03:00'}
@@ -143,15 +143,21 @@ def compute_snapshot(date=None, round_id=None, mode='demo', demo_mode=True):
         api=int(avail_arr[i]) if avail_arr is not None else None
         real=max(0,api-broken) if api is not None else None
         p_short,p_norm,p_surp=float(probs[i,0]),float(probs[i,1]),float(probs[i,2])
-        # recommendation: 관제팀용 재배치 힌트 (계수는 리허설 때 조정)
+        # recommendation: 관제팀용 재배치 힌트
+        # 예측 방향(class)과 재구성 재고(api) 둘 다 고려 -> 모순 상황 회피
         cls_name=CLS_NAMES[cls[i]]
-        if cls_name=='surplus':
+        avail=api if api is not None else 8   # 재고 없으면 baseline 가정
+        if cls_name=='surplus' and avail>=2:
+            # 과잉 예측 + 실제 재고 있음 -> 걷어감
             action='collect'
-            amount_hint=int(round((api if api is not None else 8)*p_surp*0.4)) if p_surp>0 else 0
+            amount_hint=int(round(avail*p_surp*0.4))
         elif cls_name=='shortage':
+            # 부족 예측 -> 채움. 재고 0에 가까울수록 급함
             action='supply'
-            amount_hint=int(round(p_short*6))
+            urgency=1.0+(1.0 if avail<=1 else 0.0)   # 재고 0~1이면 긴급 가중
+            amount_hint=int(round(p_short*6*urgency))
         else:
+            # normal 이거나, surplus인데 재고 부족(곧 채워질 곳) -> 지켜봄
             action='hold'; amount_hint=0
         confidence=round(max(p_short,p_norm,p_surp),2)
         stations.append({"station_id":sid,"station_name":info['name'],

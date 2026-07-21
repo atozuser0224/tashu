@@ -94,7 +94,12 @@
           "normal": 0.244,
           "surplus": 0.232
         },
-        "shortage_pressure": 0.52
+        "shortage_pressure": 0.52,
+        "recommendation": {
+          "action": "supply",
+          "amount_hint": 3,
+          "confidence": 0.52
+        }
       }
     },
     {
@@ -121,7 +126,12 @@
           "normal": 0.182,
           "surplus": 0.393
         },
-        "shortage_pressure": 0.42
+        "shortage_pressure": 0.42,
+        "recommendation": {
+          "action": "supply",
+          "amount_hint": 3,
+          "confidence": 0.42
+        }
       }
     },
     {
@@ -148,7 +158,12 @@
           "normal": 0.2,
           "surplus": 0.045
         },
-        "shortage_pressure": 0.76
+        "shortage_pressure": 0.76,
+        "recommendation": {
+          "action": "supply",
+          "amount_hint": 5,
+          "confidence": 0.76
+        }
       }
     },
     {
@@ -175,7 +190,12 @@
           "normal": 0.207,
           "surplus": 0.552
         },
-        "shortage_pressure": 0.24
+        "shortage_pressure": 0.24,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 2,
+          "confidence": 0.55
+        }
       }
     },
     {
@@ -202,7 +222,12 @@
           "normal": 0.257,
           "surplus": 0.432
         },
-        "shortage_pressure": 0.31
+        "shortage_pressure": 0.31,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 2,
+          "confidence": 0.43
+        }
       }
     },
     {
@@ -229,7 +254,12 @@
           "normal": 0.22,
           "surplus": 0.001
         },
-        "shortage_pressure": 0.78
+        "shortage_pressure": 0.78,
+        "recommendation": {
+          "action": "supply",
+          "amount_hint": 5,
+          "confidence": 0.78
+        }
       }
     },
     {
@@ -256,7 +286,12 @@
           "normal": 0.126,
           "surplus": 0.787
         },
-        "shortage_pressure": 0.09
+        "shortage_pressure": 0.09,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 3,
+          "confidence": 0.79
+        }
       }
     },
     {
@@ -283,7 +318,12 @@
           "normal": 0.079,
           "surplus": 0.903
         },
-        "shortage_pressure": 0.02
+        "shortage_pressure": 0.02,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 1,
+          "confidence": 0.9
+        }
       }
     },
     {
@@ -310,7 +350,12 @@
           "normal": 0.169,
           "surplus": 0.25
         },
-        "shortage_pressure": 0.58
+        "shortage_pressure": 0.58,
+        "recommendation": {
+          "action": "supply",
+          "amount_hint": 3,
+          "confidence": 0.58
+        }
       }
     },
     {
@@ -337,7 +382,12 @@
           "normal": 0.241,
           "surplus": 0.525
         },
-        "shortage_pressure": 0.23
+        "shortage_pressure": 0.23,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 2,
+          "confidence": 0.52
+        }
       }
     },
     {
@@ -364,7 +414,12 @@
           "normal": 0.113,
           "surplus": 0.858
         },
-        "shortage_pressure": 0.03
+        "shortage_pressure": 0.03,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 2,
+          "confidence": 0.86
+        }
       }
     },
     {
@@ -391,7 +446,12 @@
           "normal": 0.202,
           "surplus": 0.505
         },
-        "shortage_pressure": 0.29
+        "shortage_pressure": 0.29,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 2,
+          "confidence": 0.51
+        }
       }
     },
     {
@@ -418,7 +478,12 @@
           "normal": 0.16,
           "surplus": 0.756
         },
-        "shortage_pressure": 0.08
+        "shortage_pressure": 0.08,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 2,
+          "confidence": 0.76
+        }
       }
     },
     {
@@ -445,7 +510,12 @@
           "normal": 0.223,
           "surplus": 0.663
         },
-        "shortage_pressure": 0.11
+        "shortage_pressure": 0.11,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 3,
+          "confidence": 0.66
+        }
       }
     },
     {
@@ -472,7 +542,12 @@
           "normal": 0.13,
           "surplus": 0.771
         },
-        "shortage_pressure": 0.1
+        "shortage_pressure": 0.1,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 2,
+          "confidence": 0.77
+        }
       }
     },
     {
@@ -499,7 +574,12 @@
           "normal": 0.75,
           "surplus": 0.038
         },
-        "shortage_pressure": 0.21
+        "shortage_pressure": 0.21,
+        "recommendation": {
+          "action": "hold",
+          "amount_hint": 0,
+          "confidence": 0.75
+        }
       }
     },
     {
@@ -526,7 +606,12 @@
           "normal": 0.238,
           "surplus": 0.57
         },
-        "shortage_pressure": 0.19
+        "shortage_pressure": 0.19,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 2,
+          "confidence": 0.57
+        }
       }
     },
     {
@@ -553,7 +638,12 @@
           "normal": 0.221,
           "surplus": 0.686
         },
-        "shortage_pressure": 0.09
+        "shortage_pressure": 0.09,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 2,
+          "confidence": 0.69
+        }
       }
     },
     {
@@ -580,7 +670,12 @@
           "normal": 0.118,
           "surplus": 0.796
         },
-        "shortage_pressure": 0.09
+        "shortage_pressure": 0.09,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 1,
+          "confidence": 0.8
+        }
       }
     },
     {
@@ -607,7 +702,12 @@
           "normal": 0.361,
           "surplus": 0.028
         },
-        "shortage_pressure": 0.61
+        "shortage_pressure": 0.61,
+        "recommendation": {
+          "action": "supply",
+          "amount_hint": 4,
+          "confidence": 0.61
+        }
       }
     },
     {
@@ -634,7 +734,12 @@
           "normal": 0.013,
           "surplus": 0.987
         },
-        "shortage_pressure": 0.0
+        "shortage_pressure": 0.0,
+        "recommendation": {
+          "action": "hold",
+          "amount_hint": 0,
+          "confidence": 0.99
+        }
       }
     },
     {
@@ -661,7 +766,12 @@
           "normal": 0.114,
           "surplus": 0.872
         },
-        "shortage_pressure": 0.01
+        "shortage_pressure": 0.01,
+        "recommendation": {
+          "action": "hold",
+          "amount_hint": 0,
+          "confidence": 0.87
+        }
       }
     },
     {
@@ -688,7 +798,12 @@
           "normal": 0.191,
           "surplus": 0.39
         },
-        "shortage_pressure": 0.42
+        "shortage_pressure": 0.42,
+        "recommendation": {
+          "action": "supply",
+          "amount_hint": 3,
+          "confidence": 0.42
+        }
       }
     },
     {
@@ -715,7 +830,12 @@
           "normal": 0.354,
           "surplus": 0.408
         },
-        "shortage_pressure": 0.24
+        "shortage_pressure": 0.24,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 1,
+          "confidence": 0.41
+        }
       }
     },
     {
@@ -742,7 +862,12 @@
           "normal": 0.199,
           "surplus": 0.489
         },
-        "shortage_pressure": 0.31
+        "shortage_pressure": 0.31,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 2,
+          "confidence": 0.49
+        }
       }
     },
     {
@@ -769,7 +894,12 @@
           "normal": 0.19,
           "surplus": 0.534
         },
-        "shortage_pressure": 0.28
+        "shortage_pressure": 0.28,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 1,
+          "confidence": 0.53
+        }
       }
     },
     {
@@ -796,7 +926,12 @@
           "normal": 0.094,
           "surplus": 0.867
         },
-        "shortage_pressure": 0.04
+        "shortage_pressure": 0.04,
+        "recommendation": {
+          "action": "hold",
+          "amount_hint": 0,
+          "confidence": 0.87
+        }
       }
     },
     {
@@ -823,7 +958,12 @@
           "normal": 0.466,
           "surplus": 0.245
         },
-        "shortage_pressure": 0.29
+        "shortage_pressure": 0.29,
+        "recommendation": {
+          "action": "hold",
+          "amount_hint": 0,
+          "confidence": 0.47
+        }
       }
     },
     {
@@ -850,7 +990,12 @@
           "normal": 0.104,
           "surplus": 0.807
         },
-        "shortage_pressure": 0.09
+        "shortage_pressure": 0.09,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 2,
+          "confidence": 0.81
+        }
       }
     },
     {
@@ -877,7 +1022,12 @@
           "normal": 0.03,
           "surplus": 0.968
         },
-        "shortage_pressure": 0.0
+        "shortage_pressure": 0.0,
+        "recommendation": {
+          "action": "hold",
+          "amount_hint": 0,
+          "confidence": 0.97
+        }
       }
     },
     {
@@ -904,7 +1054,12 @@
           "normal": 0.224,
           "surplus": 0.204
         },
-        "shortage_pressure": 0.57
+        "shortage_pressure": 0.57,
+        "recommendation": {
+          "action": "supply",
+          "amount_hint": 3,
+          "confidence": 0.57
+        }
       }
     },
     {
@@ -931,7 +1086,12 @@
           "normal": 0.35,
           "surplus": 0.118
         },
-        "shortage_pressure": 0.53
+        "shortage_pressure": 0.53,
+        "recommendation": {
+          "action": "supply",
+          "amount_hint": 3,
+          "confidence": 0.53
+        }
       }
     },
     {
@@ -958,7 +1118,12 @@
           "normal": 0.655,
           "surplus": 0.137
         },
-        "shortage_pressure": 0.21
+        "shortage_pressure": 0.21,
+        "recommendation": {
+          "action": "hold",
+          "amount_hint": 0,
+          "confidence": 0.65
+        }
       }
     },
     {
@@ -985,7 +1150,12 @@
           "normal": 0.197,
           "surplus": 0.673
         },
-        "shortage_pressure": 0.13
+        "shortage_pressure": 0.13,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 2,
+          "confidence": 0.67
+        }
       }
     },
     {
@@ -1012,7 +1182,12 @@
           "normal": 0.265,
           "surplus": 0.56
         },
-        "shortage_pressure": 0.17
+        "shortage_pressure": 0.17,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 2,
+          "confidence": 0.56
+        }
       }
     },
     {
@@ -1039,7 +1214,12 @@
           "normal": 0.32,
           "surplus": 0.236
         },
-        "shortage_pressure": 0.44
+        "shortage_pressure": 0.44,
+        "recommendation": {
+          "action": "supply",
+          "amount_hint": 3,
+          "confidence": 0.44
+        }
       }
     },
     {
@@ -1066,7 +1246,12 @@
           "normal": 0.23,
           "surplus": 0.501
         },
-        "shortage_pressure": 0.27
+        "shortage_pressure": 0.27,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 2,
+          "confidence": 0.5
+        }
       }
     },
     {
@@ -1093,7 +1278,12 @@
           "normal": 0.142,
           "surplus": 0.846
         },
-        "shortage_pressure": 0.01
+        "shortage_pressure": 0.01,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 2,
+          "confidence": 0.85
+        }
       }
     },
     {
@@ -1120,7 +1310,12 @@
           "normal": 0.196,
           "surplus": 0.608
         },
-        "shortage_pressure": 0.2
+        "shortage_pressure": 0.2,
+        "recommendation": {
+          "action": "collect",
+          "amount_hint": 1,
+          "confidence": 0.61
+        }
       }
     },
     {
@@ -1147,7 +1342,12 @@
           "normal": 0.274,
           "surplus": 0.206
         },
-        "shortage_pressure": 0.52
+        "shortage_pressure": 0.52,
+        "recommendation": {
+          "action": "supply",
+          "amount_hint": 3,
+          "confidence": 0.52
+        }
       }
     }
   ]
