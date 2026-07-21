@@ -1,0 +1,195 @@
+"""
+타슈 - 통합 스냅샷 엔진 (님 파트 최종 산출물)
+=================================================
+시점을 받아 그 시점의 JSON을 '반환'. 파일 저장 X, API가 감싸서 서빙.
+데모/실시간 모드 공유 - 기준시점(ref_time)만 다름.
+
+백엔드 사용 예:
+  from snapshot_engine import compute_snapshot
+  data = compute_snapshot(date='2026-03-17', round_id='C')   # 데모
+  data = compute_snapshot(mode='realtime')                    # 실시간(현재→가까운 과거회차)
+
+미리 로드(서버 起動시 1회): load_artifacts() -> 이후 요청마다 재사용 (빠름)
+"""
+import pandas as pd, numpy as np, json, torch
+from model import A3TGCN
+
+OUT_DIR="processed"
+ROUND_TIME={'A':'07:00','B':'11:30','C':'16:00','D':'03:00'}
+_ART=None  # 캐시된 아티팩트 (서버 起動시 1회 로드)
+
+def band_to_status(b):
+    return {'none':'맑음','light':'약한 비','heavy':'우천'}.get(b,'맑음')
+
+def load_artifacts():
+    """서버 起動시 1회 호출. 모델·데이터를 메모리에 로드해 이후 요청서 재사용."""
+    global _ART
+    if _ART is not None: return _ART
+    A=torch.tensor(np.load(f'{OUT_DIR}/adjacency.npy')).float()
+    stats=json.load(open(f'{OUT_DIR}/norm_stats.json'))
+    model=A3TGCN(stats['F_node'], 4, hidden=48)
+    model.load_state_dict(torch.load(f'{OUT_DIR}/a3tgcn_v2.pt',map_location='cpu')['state'])
+    model.eval()
+    _ART=dict(
+        X_node=np.load(f'{OUT_DIR}/X_node.npy'),
+        X_global=np.load(f'{OUT_DIR}/X_global.npy'),
+        A=A, model=model, stats=stats,
+        fmn=np.load(f'{OUT_DIR}/flow_mean_n.npy'),
+        fsn=np.load(f'{OUT_DIR}/flow_std_n.npy'),
+        node_index=pd.read_csv(f'{OUT_DIR}/node_index.csv'),
+        sm=pd.read_csv(f'{OUT_DIR}/station_master.csv'),
+        timeline=pd.read_csv(f'{OUT_DIR}/timeline.csv',parse_dates=['service_date']),
+        weather=pd.read_parquet(f'{OUT_DIR}/weather_rounds.parquet'),
+        bikes=pd.read_parquet(f'{OUT_DIR}/bike_features.parquet'),
+        flow=np.load(f'{OUT_DIR}/flow.npy'),
+    )
+    return _ART
+
+def _reconstruct_availability(flow, timeline, target_idx, baseline=8):
+    """
+    선택 B: 순유출입 누적으로 상대 재고 재구성.
+    해당 회차가 속한 서비스일의 시작(baseline)부터 그 회차 '시작 시점'까지 flow 누적.
+    절대값은 baseline 가정이나 증감은 실제 flow 기반. 하루 단위 리셋으로 drift 방지.
+    반환: [N] 그 회차 시작 시점의 대여소별 가용대수(>=0)
+    """
+    row=timeline.iloc[target_idx]
+    sd=row['service_date']
+    # 같은 서비스일의 회차들을 시간순으로
+    day_rows=timeline[timeline['service_date']==sd].sort_values('round_ord')
+    day_idx=day_rows.index.tolist()
+    # target까지(미포함) 누적 = 그 회차 시작 시점 재고
+    avail=np.full(flow.shape[1], float(baseline))
+    for ti in day_idx:
+        if ti==target_idx:
+            break
+        avail=avail+flow[ti]   # 이전 회차들의 flow 반영
+    return np.clip(avail,0,None)
+
+def _broken_counts(bikes, ref_time, target_ids, top_pct=0.20):
+    """ref_time 기준 idle_days 재계산 -> station별 고장 의심 카운트 + bike Top."""
+    b=bikes.copy()
+    b['idle_days']=(pd.Timestamp(ref_time)-b['last_used']).dt.total_seconds()/86400
+    b=b[b['idle_days']>=0]  # 미래 이력 제외 (해당 시점에 아직 없던 것)
+    def norm(s,cap): return np.clip(s/cap,0,1)
+    b['broken_score']=(0.40*norm(b['idle_days'],30)+0.30*b['zero_dist_ratio']
+                       +0.15*b['short_trip_ratio']+0.15*(1-norm(b['total_trips'],20)))
+    cnt={}
+    for sid,grp in b.groupby('last_station'):
+        thr=grp['broken_score'].quantile(1-top_pct)
+        cnt[sid]=int((grp['broken_score']>=thr).sum())
+    top=b.nlargest(10,'broken_score')[['자전거번호','last_station','idle_days','broken_score']]
+    return cnt, top
+
+def compute_snapshot(date=None, round_id=None, mode='demo', demo_mode=True):
+    """
+    시점의 JSON 반환.
+    - mode='demo': date+round_id 지정
+    - mode='realtime': 현재시각 기준 가장 가까운 과거 회차 (API 없으면 폴백)
+    """
+    A=load_artifacts()
+    tl=A['timeline']
+
+    # 시점 -> 타임라인 인덱스
+    if mode=='realtime':
+        now=pd.Timestamp.now()
+        # 현재 이전의 가장 최근 회차 (실제 API 붙기 전 폴백)
+        cand=tl.copy()
+        # round_start 근사: service_date + 회차 시작시각
+        target=tl.index[-1]  # 폴백: 마지막
+    else:
+        m=(tl['service_date']==pd.Timestamp(date))&(tl['round_id']==round_id)
+        if not m.any():
+            raise ValueError(f"해당 시점 없음: {date} {round_id}")
+        target=tl[m].index[0]
+
+    if target<8:
+        raise ValueError("입력 윈도우(8회차) 부족한 시점")
+    row=tl.iloc[target]
+    ref_time=pd.Timestamp(row['service_date'])+pd.Timedelta(hours=float(ROUND_TIME[row['round_id']].split(':')[0]))
+
+    # STGNN 추론
+    W=8
+    xn=torch.tensor(A['X_node'][target-W:target][None]).float()
+    xg=torch.tensor(A['X_global'][target-W:target][None]).float()
+    with torch.no_grad():
+        pred=A['model'](xn,xg,A['A'])[0].numpy()*A['fsn']+A['fmn']
+
+    # 고장 (ref_time 기준 재계산)
+    target_ids=set(A['node_index']['station_id'])
+    bcnt, btop=_broken_counts(A['bikes'], ref_time, target_ids)
+
+    # 날씨
+    w=A['weather']
+    wrow=w[(w['service_date']==row['service_date'])&(w['round_id']==row['round_id'])]
+    if len(wrow):
+        temp=float(wrow['temp_mean'].iloc[0]); band=wrow['precip_band'].iloc[0]; precip=float(wrow['precip_sum'].iloc[0])
+    else: temp,band,precip=15.0,'none',0.0
+
+    # 가용대수: 선택 B (순유출입 누적 재구성). demo_mode에서만.
+    avail_arr = _reconstruct_availability(A['flow'], tl, target) if demo_mode else None
+
+    stations=[]
+    for i,r in A['node_index'].iterrows():
+        sid=r['station_id']; info=A['sm'][A['sm']['station_id']==sid]
+        if len(info)==0: continue
+        info=info.iloc[0]; broken=int(bcnt.get(sid,0)); nf=float(pred[i])
+        api=int(avail_arr[i]) if avail_arr is not None else None
+        real=max(0,api-broken) if api is not None else None
+        stations.append({"station_id":sid,"station_name":info['name'],
+            "location":{"lat":float(info['lat']),"lng":float(info['lng'])},
+            "current_weather":{"status":band_to_status(band),"precipitation_mm":round(precip,1),"temperature_c":round(temp,1)},
+            "ml_correction":{"api_available":api,"broken_suspected":broken,"real_available":real},
+            "stgnn_prediction":{"predicted_net_flow":round(nf,1),"shortage_pressure":round(float(np.clip(-nf/20,0,1)),2)}})
+
+    return {"meta":{"date":str(row['service_date'].date()),"round_id":row['round_id'],
+                    "time":ROUND_TIME[row['round_id']],"mode":mode,"demo_mode":demo_mode,
+                    "note":"predicted_net_flow는 수급 경향값"},
+            "priority_bikes":[{"bike_id":r['자전거번호'],"station_id":r['last_station'],
+                               "idle_days":round(r['idle_days'],1),"broken_score":round(r['broken_score'],3)}
+                              for _,r in btop.iterrows()],
+            "stations":stations}
+
+def save_snapshot(date, round_id, out_path=None):
+    """한 회차 스냅샷을 JSON 파일로 저장."""
+    d=compute_snapshot(date=date, round_id=round_id)
+    if out_path is None:
+        out_path=f'{OUT_DIR}/snapshot_{date}_{round_id}.json'
+    with open(out_path,'w',encoding='utf-8') as f:
+        json.dump(d,f,ensure_ascii=False,indent=2)
+    print(f"[저장] {out_path} ({len(d['stations'])}개 대여소)")
+    return out_path
+
+def save_scenario(date, out_path=None):
+    """하루 전체 회차(A/B/C/D)를 한 파일에 프레임 시퀀스로 저장 (시연용)."""
+    frames=[]
+    for rid in ['A','B','C','D']:
+        try:
+            frames.append(compute_snapshot(date=date, round_id=rid))
+        except ValueError:
+            continue   # 윈도우 부족 등으로 없는 회차는 건너뜀
+    out={"meta":{"scenario_date":date,"n_frames":len(frames),
+                 "note":"과거 재생 시연. predicted_net_flow는 수급 경향값."},
+         "frames":frames}
+    if out_path is None:
+        out_path=f'{OUT_DIR}/scenario_{date}.json'
+    with open(out_path,'w',encoding='utf-8') as f:
+        json.dump(out,f,ensure_ascii=False,indent=2)
+    print(f"[저장] {out_path} ({len(frames)}개 회차 프레임)")
+    return out_path
+
+if __name__=='__main__':
+    import sys
+    # 사용법:
+    #   python snapshot_engine.py                       -> 기본 테스트 출력
+    #   python snapshot_engine.py 2026-03-17 C          -> 단일 회차 저장
+    #   python snapshot_engine.py 2026-03-17            -> 하루 전체(시나리오) 저장
+    if len(sys.argv)==3:
+        save_snapshot(sys.argv[1], sys.argv[2])
+    elif len(sys.argv)==2:
+        save_scenario(sys.argv[1])
+    else:
+        d=compute_snapshot(date='2026-03-17', round_id='C')
+        print(f"[스냅샷] {d['meta']['date']} {d['meta']['round_id']}회차, "
+              f"{len(d['stations'])}개 대여소, 고장Top {len(d['priority_bikes'])}대")
+        print("저장하려면: python snapshot_engine.py 2026-03-17 C  (단일)")
+        print("           python snapshot_engine.py 2026-03-17    (하루 전체)")
