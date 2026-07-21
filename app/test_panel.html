@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>타슈 재배치 테스트 패널</title>
+  <style>
+    :root {
+      --bg: #07110f; --panel: #0e1d19; --panel2: #132620; --line: #244139;
+      --text: #effbf5; --muted: #95afa3; --mint: #64f2ad; --yellow: #ffd166;
+      --red: #ff6b6b; --blue: #66a8ff; --shadow: 0 18px 50px rgba(0,0,0,.28);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--text); background:
+      radial-gradient(circle at 12% 0%, #12382b 0, transparent 28%),
+      radial-gradient(circle at 90% 15%, #112b3e 0, transparent 24%), var(--bg);
+      font-family: Inter, Pretendard, "Noto Sans KR", system-ui, sans-serif; min-height: 100vh; }
+    button { font: inherit; }
+    .shell { width: min(1380px, calc(100% - 36px)); margin: 0 auto; padding: 26px 0 56px; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:24px; }
+    .brand { display:flex; align-items:center; gap:13px; }
+    .logo { width:44px; height:44px; border-radius:14px; display:grid; place-items:center;
+      color:#062016; background:var(--mint); font-size:22px; box-shadow:0 0 30px rgba(100,242,173,.22); }
+    h1 { font-size:20px; margin:0 0 3px; letter-spacing:-.04em; }
+    .sub { color:var(--muted); font-size:13px; }
+    .badge { border:1px solid rgba(100,242,173,.35); color:var(--mint); background:rgba(100,242,173,.08);
+      padding:8px 12px; border-radius:999px; font-size:12px; font-weight:800; letter-spacing:.08em; }
+    .rolebar { display:flex; gap:9px; align-items:center; }
+    select { color:var(--text); background:#10231d; border:1px solid var(--line); border-radius:11px; padding:9px 12px; font:inherit; font-size:13px; }
+    .hero { border:1px solid var(--line); border-radius:24px; padding:28px; background:linear-gradient(135deg,rgba(19,48,39,.96),rgba(10,24,21,.93)); box-shadow:var(--shadow); }
+    .hero-grid { display:grid; grid-template-columns:1.3fr .7fr; align-items:end; gap:24px; }
+    .hero h2 { font-size:34px; letter-spacing:-.055em; margin:0 0 10px; line-height:1.18; }
+    .hero p { color:var(--muted); margin:0; max-width:680px; line-height:1.65; }
+    .actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:9px; }
+    .btn { border:1px solid var(--line); border-radius:12px; padding:11px 14px; color:var(--text); background:#142a23;
+      cursor:pointer; font-weight:750; transition:.18s ease; }
+    .btn:hover { transform:translateY(-1px); border-color:#477262; background:#19352b; }
+    .btn.primary { background:var(--mint); border-color:var(--mint); color:#062016; }
+    .btn.warn { color:var(--yellow); }.btn.danger { color:#ff9393; }
+    .btn.small { padding:8px 10px; font-size:12px; border-radius:9px; }
+    .stats { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin:16px 0; }
+    .stat { border:1px solid var(--line); border-radius:17px; padding:17px; background:rgba(14,29,25,.9); }
+    .stat span { display:block; color:var(--muted); font-size:12px; margin-bottom:8px; }
+    .stat strong { font-size:25px; letter-spacing:-.04em; }
+    .layout { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr); gap:16px; }
+    .card { border:1px solid var(--line); border-radius:20px; background:rgba(14,29,25,.94); box-shadow:var(--shadow); overflow:hidden; }
+    .card-head { padding:18px 20px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; }
+    .card-head h3 { margin:0; font-size:15px; }.card-body { padding:16px; }
+    .mission-list { display:grid; gap:11px; }
+    .mission { border:1px solid var(--line); border-radius:15px; padding:16px; background:var(--panel2); }
+    .mission-top { display:flex; justify-content:space-between; gap:12px; align-items:start; }
+    .mission h4 { margin:0 0 6px; font-size:15px; }.mission-meta { color:var(--muted); font-size:12px; }
+    .status { font-size:11px; font-weight:850; padding:6px 9px; border-radius:999px; background:#203b32; color:var(--mint); }
+    .status.completed { color:#a6c8ff; background:#192e48; }.status.cancelled { color:#ff9292; background:#3c2023; }
+    .progress { height:7px; margin:13px 0; border-radius:999px; background:#07120f; overflow:hidden; }
+    .progress i { display:block; height:100%; background:linear-gradient(90deg,var(--mint),#58c9ff); }
+    .mission-actions { display:flex; flex-wrap:wrap; gap:7px; }
+    .empty { color:var(--muted); text-align:center; padding:42px 18px; }
+    .flow { display:grid; gap:10px; margin-bottom:16px; }
+    .flow-item { display:flex; gap:11px; align-items:center; color:var(--muted); font-size:13px; }
+    .flow-item b { width:28px; height:28px; flex:0 0 28px; display:grid; place-items:center; border-radius:9px; color:#062016; background:var(--mint); }
+    .qr-tool { border:1px solid var(--line); background:#0a1713; border-radius:14px; padding:13px; margin-bottom:14px; }
+    .qr-tool h4 { margin:0 0 10px; font-size:13px; }.qr-row{display:flex;gap:8px}.qr-row select{min-width:0;flex:1}.qr-preview{display:none;margin-top:12px;text-align:center}.qr-preview img{width:190px;max-width:100%;background:white;border-radius:10px;padding:8px}.qr-preview code{display:block;color:var(--muted);word-break:break-all;font-size:10px;margin-top:8px;max-height:38px;overflow:hidden}
+    .driver-note { display:none; border:1px solid rgba(102,168,255,.25); background:rgba(102,168,255,.08); color:#b9d5ff; border-radius:12px; padding:11px 13px; margin-bottom:13px; font-size:12px; line-height:1.55; }
+    body.driver-mode .admin-only { display:none !important; } body.driver-mode .driver-note { display:block; }
+    .console { height:310px; overflow:auto; padding:14px; background:#050c0a; border-radius:13px; border:1px solid #182b25;
+      font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; color:#b7d4c7; }
+    .log { border-bottom:1px dashed #173027; padding:6px 0; }.log time { color:#58766a; margin-right:8px; }
+    .log.error { color:#ff9292; }.log.ok { color:var(--mint); }
+    .dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--mint); margin-right:6px; box-shadow:0 0 12px var(--mint); }
+    @media(max-width:980px){ .hero-grid,.layout{grid-template-columns:1fr}.actions{justify-content:flex-start}.stats{grid-template-columns:repeat(2,1fr)} }
+    @media(max-width:560px){ .shell{width:min(100% - 20px,1380px)}.hero{padding:20px}.hero h2{font-size:27px}.stats{grid-template-columns:1fr 1fr}.stat:last-child{grid-column:1/-1} }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="brand"><div class="logo">🚲</div><div><h1>타슈 재배치 테스트 패널</h1><div class="sub">가상 기사 · 가상 GPS · 가상 QR · 실제 서버 상태 전이</div></div></div>
+    <div class="rolebar"><select id="roleSelect" onchange="changeRole()"><option value="admin">관리자 역할</option><option value="DRIVER-01">테스트 기사 · 김기사</option><option value="DRIVER-02">테스트 기사 · 이기사</option></select><div class="badge"><span class="dot"></span>TEST MODE</div></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-grid">
+      <div><h2>현장에 나가지 않고<br>전체 재배치를 실행합니다.</h2><p>실제 타슈 재고, TMAP 호출, 로그인, 결제 없이 계획 생성부터 QR 반납과 포인트 승인까지 버튼으로 테스트합니다. 모든 데이터는 이 서버의 테스트 DB에만 기록됩니다.</p></div>
+      <div class="actions">
+        <button class="btn danger admin-only" onclick="resetDemo()">테스트 초기화</button>
+        <button class="btn" onclick="simulateIncident()">사고 신고</button>
+        <button class="btn" onclick="simulateGps()">GPS 이상 테스트</button>
+        <button class="btn primary admin-only" onclick="createPlan()">가상 계획 만들기</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats">
+    <div class="stat"><span>전체 미션</span><strong id="statMissions">0</strong></div>
+    <div class="stat"><span>완료 미션</span><strong id="statCompleted">0</strong></div>
+    <div class="stat"><span>반납 자전거</span><strong id="statBikes">0</strong></div>
+    <div class="stat"><span>승인 대기 포인트</span><strong id="statPending">0P</strong></div>
+    <div class="stat"><span>승인 포인트</span><strong id="statApproved">0P</strong></div>
+  </section>
+
+  <main class="layout">
+    <section class="card">
+      <div class="card-head"><h3>기사 미션</h3><div class="actions admin-only"><button class="btn small" onclick="autoRunAll()">전체 자동 수행</button><button class="btn small primary" onclick="approveRewards()">리워드 전부 승인</button></div></div>
+      <div class="card-body"><div class="driver-note">기사 역할입니다. 현재 정차지에서 <b>대여소 도착</b>을 먼저 누른 뒤 픽업 또는 QR 반납을 진행하세요.</div><div id="missions" class="mission-list"><div class="empty">가상 계획을 만들면 기사 미션이 표시됩니다.</div></div></div>
+    </section>
+    <aside class="card">
+      <div class="card-head"><h3>테스트 흐름</h3><span class="sub" id="lastUpdate">대기 중</span></div>
+      <div class="card-body">
+        <div class="qr-tool admin-only"><h4>대여소 테스트 QR 만들기</h4><div class="qr-row"><select id="stationSelect"><option value="">미션을 먼저 생성하세요</option></select><button class="btn small primary" onclick="generateStationQr()">QR 생성</button></div><div id="qrPreview" class="qr-preview"><img id="qrImage" alt="대여소 QR"><code id="qrPayload"></code></div></div>
+        <div class="flow">
+          <div class="flow-item"><b>1</b><span>가상 수요·재고로 기사 동선 생성</span></div>
+          <div class="flow-item"><b>2</b><span>미션 수락 후 가상 GPS 이동</span></div>
+          <div class="flow-item"><b>3</b><span>자전거와 대여소 QR 자동 스캔</span></div>
+          <div class="flow-item"><b>4</b><span>리워드 대기 → 관리자 승인</span></div>
+        </div>
+        <div id="console" class="console"></div>
+      </div>
+    </aside>
+  </main>
+</div>
+<script>
+  const adminHeaders={'X-Test-Role':'admin'},driverHeaders=id=>({'X-Test-Role':'driver','X-Test-Driver-Id':id});
+  const state={missions:[],details:{},arrived:{},loaded:{}};
+  const selectedRole=()=>document.querySelector('#roleSelect').value;
+  const selectedDriver=()=>selectedRole()==='admin'?null:selectedRole();
+  const currentHeaders=()=>selectedDriver()?driverHeaders(selectedDriver()):adminHeaders;
+  function log(message,type=''){const box=document.querySelector('#console'),row=document.createElement('div');row.className='log '+type;row.innerHTML=`<time>${new Date().toLocaleTimeString()}</time>${message}`;box.prepend(row)}
+  async function api(path,options={},headers=adminHeaders){const response=await fetch(path,{...options,headers:{'Content-Type':'application/json',...headers,...(options.headers||{})}});if(!response.ok){let body={};try{body=await response.json()}catch{}throw new Error(body.detail||`${response.status} ${response.statusText}`)}return response.status===204?null:response.json()}
+  async function safe(label,fn){try{const value=await fn();log(label,'ok');return value}catch(error){log(`${label} 실패: ${error.message}`,'error');throw error}}
+  function changeRole(){const driver=selectedDriver();document.body.classList.toggle('driver-mode',!!driver);localStorage.setItem('tashu-test-role',selectedRole());log(driver?`${driver} 테스트 기사 역할로 전환`:'관리자 역할로 전환','ok');refresh()}
+  async function refresh(){const headers=currentHeaders(),missionData=await api('/api/v1/operations/missions',{},headers);state.missions=missionData.missions;state.details={};await Promise.all(state.missions.map(async m=>state.details[m.mission_id]=await api(`/api/v1/operations/missions/${m.mission_id}`,{},headers)));
+    let completed=state.missions.filter(m=>m.status==='completed').length,bikes=Object.values(state.details).flatMap(m=>m.stops).filter(s=>s.action==='dropoff').reduce((a,s)=>a+(s.actual_quantity||0),0),pending=0,approved=0;
+    if(selectedDriver()){const wallet=await api(`/api/v1/rewards/wallets/${selectedDriver()}`,{},headers);pending=wallet.pending_points;approved=wallet.balance_points}else{const analytics=await api('/api/v1/admin/analytics/operations');completed=analytics.mission_counts.completed||0;bikes=analytics.total_bikes_delivered||0;pending=analytics.reward_points.pending||0;approved=analytics.reward_points.approved||0}
+    document.querySelector('#statMissions').textContent=missionData.count;document.querySelector('#statCompleted').textContent=completed;document.querySelector('#statBikes').textContent=bikes;document.querySelector('#statPending').textContent=pending.toLocaleString()+'P';document.querySelector('#statApproved').textContent=approved.toLocaleString()+'P';document.querySelector('#lastUpdate').textContent=new Date().toLocaleTimeString()+' 갱신';renderMissions();populateStations()}
+  function actionButtons(m){if(!selectedDriver())return `<button class="btn small primary" onclick="autoRunMission('${m.mission_id}','${m.driver_id}')">자동 수행</button><button class="btn small warn" onclick="reassignMission('${m.mission_id}','${m.driver_id}')">기사 변경</button><button class="btn small danger" onclick="cancelMission('${m.mission_id}')">취소</button>`;
+    if(m.status==='offered')return `<button class="btn small primary" onclick="acceptMission('${m.mission_id}','${m.driver_id}')">미션 수락</button>`;if(m.status==='accepted')return `<button class="btn small primary" onclick="startMission('${m.mission_id}','${m.driver_id}')">운행 시작</button>`;if(m.status!=='in_progress')return '';
+    const stop=state.details[m.mission_id].stops.find(s=>s.status==='pending');if(!stop)return '';const key=`${m.mission_id}:${stop.sequence}`,arrived=state.arrived[key];return arrived?`<button class="btn small primary" onclick="processCurrentStop('${m.mission_id}','${m.driver_id}')">${stop.action==='pickup'?'자전거 픽업 처리':'QR 스캔 · 반납'}</button>`:`<button class="btn small primary" onclick="arriveAtCurrentStop('${m.mission_id}','${m.driver_id}')">${stop.station_name} 도착</button>`}
+  function renderMissions(){const root=document.querySelector('#missions');if(!state.missions.length){root.innerHTML='<div class="empty">관리자 역할에서 가상 계획을 만들어주세요.</div>';return}root.innerHTML=state.missions.map(m=>{const pct=m.total_stops?Math.round(m.completed_stops/m.total_stops*100):0,detail=state.details[m.mission_id],next=detail?.stops.find(s=>s.status==='pending');return `<article class="mission"><div class="mission-top"><div><h4>${m.driver_name} · ${m.planned_bikes}대</h4><div class="mission-meta">${m.mission_id} · 정차 ${m.completed_stops}/${m.total_stops} · ${m.reward_status||'리워드 미발생'}</div>${next?`<div class="mission-meta" style="margin-top:5px;color:#c4ded2">다음: ${next.action==='pickup'?'픽업':'반납'} · ${next.station_name} · ${next.planned_quantity}대</div>`:''}</div><span class="status ${m.status}">${m.status}</span></div><div class="progress"><i style="width:${pct}%"></i></div><div class="mission-actions">${actionButtons(m)}</div></article>`}).join('')}
+  function populateStations(){if(selectedDriver())return;const stations=new Map();Object.values(state.details).flatMap(m=>m.stops).forEach(s=>stations.set(s.station_id,s));const select=document.querySelector('#stationSelect'),current=select.value;select.innerHTML=stations.size?[...stations.values()].map(s=>`<option value="${s.station_id}">${s.station_name} (${s.station_id})</option>`).join(''):'<option value="">미션을 먼저 생성하세요</option>';if(stations.has(current))select.value=current}
+  async function generateStationQr(){const id=document.querySelector('#stationSelect').value;if(!id){log('QR을 만들 대여소가 없습니다.','error');return}const qr=await safe(`${id} 대여소 QR 생성`,()=>api(`/api/v1/test/stations/${id}/qr`,{method:'POST'}));localStorage.setItem(`station-qr:${id}`,qr.qr_payload);document.querySelector('#qrImage').src=qr.svg_data_url;document.querySelector('#qrPayload').textContent=qr.qr_payload;document.querySelector('#qrPreview').style.display='block'}
+  async function resetDemo(){await safe('테스트 데이터 초기화',()=>api('/api/v1/test/reset',{method:'POST'}));state.arrived={};state.loaded={};Object.keys(localStorage).filter(k=>k.startsWith('station-qr:')||k.startsWith('loaded:')).forEach(k=>localStorage.removeItem(k));await refresh()}
+  async function createPlan(){const plan=await safe('가상 재배치 계획 생성',()=>api('/api/v1/test/demo/plan',{method:'POST'}));log(`미션 ${plan.published_mission_ids.length}개, ${plan.summary.total_bikes_moved}대 배정`);await refresh()}
+  async function acceptMission(id,driver){await safe('미션 수락',()=>api(`/api/v1/operations/missions/${id}/accept`,{method:'POST',body:JSON.stringify({driver_id:driver})},driverHeaders(driver)));await refresh()}
+  async function startMission(id,driver){await safe('운행 시작',()=>api(`/api/v1/operations/missions/${id}/start`,{method:'POST',body:JSON.stringify({driver_id:driver})},driverHeaders(driver)));await refresh()}
+  function loadedFor(id){if(!state.loaded[id])state.loaded[id]=JSON.parse(localStorage.getItem(`loaded:${id}`)||'[]');return state.loaded[id]}
+  function saveLoaded(id){localStorage.setItem(`loaded:${id}`,JSON.stringify(state.loaded[id]||[]))}
+  async function arriveAtStop(missionId,driverId,stop){const now=new Date().toISOString();await api('/api/v1/operations/drivers/me/location',{method:'POST',body:JSON.stringify({location:stop.location,recorded_at:now,accuracy_meters:5,speed_kmh:0,device_id:'test-panel-driver'})},driverHeaders(driverId));state.arrived[`${missionId}:${stop.sequence}`]=true;log(`${driverId} → ${stop.station_name} 테스트 도착`,'ok')}
+  async function arriveAtCurrentStop(missionId,driverId){const detail=await api(`/api/v1/operations/missions/${missionId}`,{},driverHeaders(driverId)),stop=detail.stops.find(s=>s.status==='pending');if(stop)await safe(`${stop.station_name} 도착 처리`,()=>arriveAtStop(missionId,driverId,stop));renderMissions()}
+  async function processStop(missionId,driverId,stop,autoQr=false){const headers=driverHeaders(driverId),loaded=loadedFor(missionId);let codes=[];
+    if(stop.action==='pickup'){codes=Array.from({length:stop.planned_quantity},(_,i)=>`TEST-BIKE-${missionId}-${stop.sequence}-${i+1}`);loaded.push(...codes);log(`자전거 QR ${codes.length}개 픽업 스캔`)}else{let payload=localStorage.getItem(`station-qr:${stop.station_id}`);if(!payload&&autoQr){const qr=await api(`/api/v1/test/stations/${stop.station_id}/qr`,{method:'POST'});payload=qr.qr_payload;localStorage.setItem(`station-qr:${stop.station_id}`,payload)}if(!payload)throw new Error('관리자 역할에서 이 대여소 QR을 먼저 생성하세요.');const challenge=await api(`/api/v1/operations/missions/${missionId}/stops/${stop.sequence}/qr-challenge`,{method:'POST',body:JSON.stringify({driver_id:driverId,device_id:'test-panel-driver'})},headers);await api(`/api/v1/operations/missions/${missionId}/stops/${stop.sequence}/verify-qr`,{method:'POST',body:JSON.stringify({driver_id:driverId,location:stop.location,qr_payload:payload,challenge_id:challenge.challenge_id,device_id:'test-panel-driver',integrity_provider:'development'})},headers);codes=loaded.splice(0,stop.planned_quantity);log(`${stop.station_name} 관리자 QR 스캔 성공`,'ok')}
+    await api(`/api/v1/operations/missions/${missionId}/stops/${stop.sequence}/complete`,{method:'POST',body:JSON.stringify({driver_id:driverId,location:stop.location,actual_quantity:stop.planned_quantity,bike_qr_codes:codes})},headers);saveLoaded(missionId);delete state.arrived[`${missionId}:${stop.sequence}`]}
+  async function processCurrentStop(missionId,driverId){await safe('현재 정차지 처리',async()=>{const detail=await api(`/api/v1/operations/missions/${missionId}`,{},driverHeaders(driverId)),stop=detail.stops.find(s=>s.status==='pending');if(stop)await processStop(missionId,driverId,stop,false)});await refresh()}
+  async function autoRunMission(missionId,driverId){await safe(`${driverId} 미션 자동 수행`,async()=>{let detail=await api(`/api/v1/operations/missions/${missionId}`,{},adminHeaders);if(detail.status==='offered')await api(`/api/v1/operations/missions/${missionId}/accept`,{method:'POST',body:JSON.stringify({driver_id:driverId})},driverHeaders(driverId));detail=await api(`/api/v1/operations/missions/${missionId}`,{},driverHeaders(driverId));if(detail.status==='accepted')await api(`/api/v1/operations/missions/${missionId}/start`,{method:'POST',body:JSON.stringify({driver_id:driverId})},driverHeaders(driverId));while(true){detail=await api(`/api/v1/operations/missions/${missionId}`,{},driverHeaders(driverId));const stop=detail.stops.find(s=>s.status==='pending');if(!stop)break;await arriveAtStop(missionId,driverId,stop);await processStop(missionId,driverId,stop,true)}});await refresh()}
+  async function autoRunAll(){for(const m of state.missions.filter(x=>!['completed','cancelled'].includes(x.status)))await autoRunMission(m.mission_id,m.driver_id)}
+  async function approveRewards(){const pending=await api('/api/v1/admin/rewards/reviews?status=pending');for(const tx of pending.transactions)await api(`/api/v1/admin/rewards/${tx.transaction_id}/approved`,{method:'POST',body:JSON.stringify({reason:'테스트 패널 자동 승인'})});log(`리워드 ${pending.count}건 승인`,'ok');await refresh()}
+  async function cancelMission(id){await safe('미션 취소',()=>api(`/api/v1/admin/missions/${id}/cancel`,{method:'POST',body:JSON.stringify({reason:'테스트 패널에서 취소'})}));await refresh()}
+  async function reassignMission(id,current){const next=current==='DRIVER-01'?'DRIVER-02':'DRIVER-01';await safe(`${next} 기사로 재배정`,()=>api(`/api/v1/admin/missions/${id}/reassign`,{method:'POST',body:JSON.stringify({driver_id:next,driver_name:next==='DRIVER-01'?'김기사':'이기사',reason:'테스트 패널 재배정'})}));await refresh()}
+  async function simulateIncident(){const m=state.missions.find(x=>x.status!=='cancelled');if(!m){log('먼저 계획을 만들어주세요.','error');return}await safe('가상 현장 사고 신고',()=>api(`/api/v1/operations/missions/${m.mission_id}/incidents`,{method:'POST',body:JSON.stringify({incident_type:'access_blocked',description:'테스트 패널: 공사로 대여소 접근 불가',location:{lat:36.36,lng:127.35},client_event_id:'panel-'+crypto.randomUUID()})},driverHeaders(m.driver_id)))}
+  async function simulateGps(){const m=state.missions.find(x=>x.status!=='cancelled');if(!m){log('먼저 계획을 만들어주세요.','error');return}const headers=driverHeaders(m.driver_id),now=Date.now();await api('/api/v1/operations/drivers/me/location',{method:'POST',body:JSON.stringify({location:{lat:36.36,lng:127.35},recorded_at:new Date(now).toISOString(),accuracy_meters:8,speed_kmh:20,device_id:'test-panel'})},headers);const result=await api('/api/v1/operations/drivers/me/location',{method:'POST',body:JSON.stringify({location:{lat:37.36,lng:127.35},recorded_at:new Date(now+1000).toISOString(),accuracy_meters:8,speed_kmh:20,device_id:'test-panel'})},headers);log(`GPS 결과: ${result.anomaly||'정상'}`,result.anomaly?'error':'ok')}
+  document.querySelector('#roleSelect').value=localStorage.getItem('tashu-test-role')||'admin';document.body.classList.toggle('driver-mode',!!selectedDriver());refresh().then(()=>log('역할 기반 테스트 패널 준비 완료','ok')).catch(e=>log(e.message,'error'));
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+{
+  "core": {
+    "meta": {
+      "generated_at": "2026-07-21T15:55:00+09:00",
+      "horizon": "16:00→03:00",
+      "demo_mode": false
+    },
+    "stations": [
+      {
+        "station_id": "ST-001",
+        "station_name": "충남대 정문 앞",
+        "location": { "lat": 36.3665, "lng": 127.3445 },
+        "weather": { "precip_band": "rain", "temperature_c": 18.0 },
+        "ml": { "broken_suspected_count": 2 },
+        "stgnn": { "predicted_net_flow": -12, "shortage_pressure": 0.85 }
+      },
+      {
+        "station_id": "ST-002",
+        "station_name": "궁동 인근 잉여 대여소",
+        "location": { "lat": 36.3618, "lng": 127.3500 },
+        "weather": { "precip_band": "rain", "temperature_c": 18.0 },
+        "ml": { "broken_suspected_count": 1 },
+        "stgnn": { "predicted_net_flow": 15, "shortage_pressure": 0.1 }
+      }
+    ]
+  },
+  "drivers": [
+    {
+      "driver_id": "DRIVER-01",
+      "driver_name": "김기사",
+      "start_at": "2026-07-21T16:00:00+09:00",
+      "start_location": { "lat": 36.3600, "lng": 127.3400 },
+      "vehicle_capacity": 8
+    },
+    {
+      "driver_id": "DRIVER-02",
+      "driver_name": "이기사",
+      "start_at": "2026-07-21T16:10:00+09:00",
+      "start_location": { "lat": 36.3500, "lng": 127.3700 },
+      "vehicle_capacity": 10
+    }
+  ],
+  "options": {
+    "use_live_tashu": true,
+    "use_tmap_planning_matrix": true,
+    "use_tmap_navigation": true,
+    "reserve_bikes_per_source": 2
+  }
+}
