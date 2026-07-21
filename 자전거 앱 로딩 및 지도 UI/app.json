@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "타슈캐스트",
+    "slug": "ridego-driver",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "ridego",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "자전거와 대여소 QR을 확인하기 위해 카메라를 사용합니다.",
+        "NSLocationWhenInUseUsageDescription": "기사의 대여소 도착을 확인하기 위해 위치를 사용합니다."
+      }
+    },
+    "android": {
+      "package": "kr.co.ridego.driver",
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "자전거와 대여소 QR을 확인하기 위해 카메라를 사용합니다."
+        }
+      ],
+      "expo-location",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "expo-font"
+    ]
+  }
+}

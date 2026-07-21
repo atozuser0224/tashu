@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<script src="https://apis.openapi.sk.com/tmap/jsv2?version=1&appKey=L46IMLQYRu11AZhUXWRkz9Qarp01Bpm86xObCORB"></script>
+<style>
+  html,body{margin:0;height:100%;background:#e8e8e8;font-family:Archivo,system-ui,sans-serif;overflow:hidden}
+  #map{position:absolute;inset:0;animation:rg-zoomin .95s cubic-bezier(.22,.61,.36,1) both;transform-origin:50% 46%}
+  @keyframes rg-zoomin{0%{transform:scale(1.32)}100%{transform:scale(1)}}
+  #map *{box-sizing:content-box}
+
+  .mk{position:relative;width:30px;height:30px}
+  .mk .ring{position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;background:var(--c);opacity:.4;animation:drvp 2s ease-out infinite}
+  @keyframes drvp{0%{transform:scale(.6);opacity:.55}70%{transform:scale(2.8);opacity:0}100%{opacity:0}}
+  .mk .dot{position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;background:var(--c);border:3px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:2}
+  .mk .dot svg{width:16px;height:16px;display:block}
+  .mk .lab{position:absolute;top:37px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#201e1d;color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:8px;letter-spacing:-.02em;box-shadow:0 2px 8px rgba(0,0,0,.25);z-index:3}
+  .mk .lab:after{content:"";position:absolute;left:50%;top:-4px;transform:translateX(-50%);border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:4px solid #201e1d}
+
+  .odotw{position:relative;width:16px;height:16px}
+  .odot{position:absolute;left:0;top:0;width:16px;height:16px;border-radius:50%;background:#6f6f6f;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35),0 0 16px 4px rgba(255,255,255,.95);z-index:2}
+  .oring{position:absolute;left:-3px;top:-3px;width:22px;height:22px;border-radius:50%;background:#fff;opacity:.6;animation:orp 2.2s ease-out infinite}
+  @keyframes orp{0%{transform:scale(.45);opacity:.75}70%{transform:scale(2.4);opacity:0}100%{opacity:0}}
+
+  .bub{display:inline-flex;align-items:center;justify-content:center;background:#fff;padding:9px 17px;border-radius:16px;font-size:14px;font-weight:800;color:#201e1d;letter-spacing:-.02em;box-shadow:0 8px 22px rgba(0,0,0,.18);white-space:nowrap;position:relative;line-height:1}
+  .bub:after{content:"";position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);border-left:7px solid transparent;border-right:7px solid transparent;border-top:7px solid #fff}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+  var params = new URLSearchParams(location.search);
+  var phase = (params.get('phase') || 'collect');
+  var st = parseInt(params.get('st') || '0', 10) || 0;
+  var driver  = { lat: 36.36285, lng: 127.35595 };
+  var collect = { lat: 36.36455, lng: 127.35760 };
+  var stations = [ { lat: 36.36615, lng: 127.36285, name: '유성온천역' }, { lat: 36.36760, lng: 127.36560, name: '대전시청역' } ];
+  if (st >= stations.length) st = stations.length - 1;
+  var collectRoute = [driver, {lat:36.36355,lng:127.35655}, collect];
+  var deployStart = st === 0 ? collect : stations[st - 1];
+  var deployTarget = stations[st];
+  var deployRoute = [deployStart, { lat: (deployStart.lat + deployTarget.lat) / 2, lng: (deployStart.lng + deployTarget.lng) / 2 }, deployTarget];
+  var isCollect = phase === 'collect';
+  var isDeploy = phase === 'deploy';
+  var route = isCollect ? collectRoute : (isDeploy ? deployRoute : null);
+  var routeColor = isCollect ? '#1FA35C' : '#F7941D';
+  var mid = route ? route[Math.floor(route.length / 2)] : null;
+  var CENTER = mid || { lat: 36.36415, lng: 127.35945 };
+  var distLabel = isCollect ? '0.5 km' : (st === 0 ? '0.8 km' : '1.1 km');
+
+  var map;
+  function boot(){
+    if (typeof Tmapv2 === 'undefined' || !Tmapv2.Map) { setTimeout(boot, 120); return; }
+    map = new Tmapv2.Map('map', {
+      center: new Tmapv2.LatLng(CENTER.lat, CENTER.lng),
+      width: '100%', height: '100%', zoom: 16, zoomControl: false, scrollwheel: true
+    });
+
+    function marker(p, html, offX, offY){
+      return new Tmapv2.Marker({
+        position: new Tmapv2.LatLng(p.lat, p.lng),
+        iconHTML: html, map: map,
+        offset: new Tmapv2.Point(offX, offY)
+      });
+    }
+
+    if (route){
+      var ll = route.map(function(p){ return new Tmapv2.LatLng(p.lat, p.lng); });
+      new Tmapv2.Polyline({ path: ll, strokeColor: routeColor, strokeWeight: 11, strokeOpacity: 0.3, map: map });
+      new Tmapv2.Polyline({ path: ll, strokeColor: routeColor, strokeWeight: 5, strokeOpacity: 1, map: map });
+
+      [ {lat:36.36000,lng:127.36320}, {lat:36.36760,lng:127.35520}, {lat:36.36180,lng:127.35400} ].forEach(function(c){
+        marker(c, '<div class="odotw"><span class="oring"></span><span class="odot"></span></div>', 0, 0);
+      });
+
+      var colBox = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8 12 4l9 4-9 4z"/><path d="M3 8v8l9 4 9-4V8"/></svg>';
+      var bikeGl = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="3.4"/><circle cx="18" cy="17" r="3.4"/><path d="M6 17 10 8h5l3 9M10 8l2 5h6"/></svg>';
+      var drvHTML = '<div class="mk" style="--c:' + routeColor + '"><span class="ring"></span><span class="dot"><svg viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="7.5" r="3.6"/><path d="M5.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6z"/></svg></span><span class="lab">현재 위치</span></div>';
+      var stnHTML = '<div class="mk" style="--c:' + routeColor + '"><span class="dot">' + bikeGl + '</span><span class="lab">' + deployTarget.name + '</span></div>';
+      function colHTML(label){ return '<div class="mk" style="--c:' + routeColor + '"><span class="dot">' + colBox + '</span><span class="lab">' + label + '</span></div>'; }
+
+      if (isCollect){
+        marker(driver, drvHTML, 0, 0);
+        marker(collect, colHTML('회수 지점'), 0, 0);
+      } else {
+        marker(deployStart, colHTML('현재 위치'), 0, 0);
+        marker(deployTarget, stnHTML, 0, 0);
+      }
+
+      marker(mid, '<div class="bub">' + distLabel + '</div>', 0, 0);
+    }
+
+    geocode();
+  }
+
+  function geocode(){
+    fetch('https://apis.openapi.sk.com/tmap/geo/reversegeocoding?version=1&format=json&coordType=WGS84GEO&addressType=A10&lon=' + CENTER.lng + '&lat=' + CENTER.lat + '&appKey=L46IMLQYRu11AZhUXWRkz9Qarp01Bpm86xObCORB')
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var a = (d && d.addressInfo) || {};
+        var city = a.city_do || '';
+        var detail = [a.gu_gun, a.eupMyunDong || a.legalDong, a.roadName ? (a.roadName + ' ' + (a.buildingIndex || '')) : ''].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+        if (city) parent.postMessage({ type: 'addr', city: city, address: detail || a.fullAddress || '' }, '*');
+      })
+      .catch(function(){});
+  }
+  boot();
+
+  window.addEventListener('message', function(e){
+    if (e.data === 'recenter' && map) { map.setCenter(new Tmapv2.LatLng(CENTER.lat, CENTER.lng)); map.setZoom(16); }
+  });
+</script>
+</body>
+</html>
