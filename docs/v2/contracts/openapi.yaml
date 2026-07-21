@@ -1,0 +1,1583 @@
+openapi: 3.1.0
+info:
+  title: TashuCast Contextual Forecast API
+  version: 2.1.0
+  summary: 날씨·시간·휴일·행사·공간 맥락을 결합한 15분 재고 소진 확률과 안전한 폴백 계약
+  description: |
+    예측, 재고 정체 신호, 커뮤니티 신고, 공식 정비, 공식 재고 최신성을
+    서로 독립된 축으로 제공한다. 예측 맥락 상태는 decision_signal의 provenance이며
+    공식 data_source/data_freshness를 대체하지 않는다. LLM은 설명 문장만 생성할
+    수 있고 상태나 행동 코드를 결정하지 않는다. 클라이언트가 생성한 device_id
+    또는 기기 지문은 받지 않는다.
+servers:
+  - url: http://localhost:8000
+    description: 로컬 및 오프라인 데모
+tags:
+  - name: Session
+    description: 추적용 기기 ID가 아닌 짧은 수명의 익명 signed session
+  - name: Stations
+    description: 정류장 최신 관측과 독립 상태 축
+  - name: Forecast
+    description: 도착 시점 예측과 결정적 행동 코드
+  - name: Reports
+    description: capability로 보호되는 익명 커뮤니티 신고
+  - name: Feedback
+    description: 재고 정체 신호에 대한 비공식 이용자 피드백
+  - name: Health
+    description: 비민감 상태 점검
+
+paths:
+  /api/v1/sessions/anonymous:
+    post:
+      tags: [Session]
+      operationId: createAnonymousSession
+      summary: 익명 signed session 발급
+      description: |
+        서버가 HttpOnly, Secure, SameSite=Lax 쿠키를 발급한다. IP나 하드웨어
+        식별자를 토큰 payload에 넣지 않는다. 응답의 CSRF 토큰은 변경 요청의
+        X-CSRF-Token 헤더에 사용한다.
+      responses:
+        '201':
+          description: 세션 발급 성공
+          headers:
+            Set-Cookie:
+              description: tashucast_session signed cookie
+              schema:
+                type: string
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+            X-Request-ID:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnonymousSessionResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/stations:
+    get:
+      tags: [Stations]
+      operationId: listStations
+      summary: 정류장 목록 조회
+      description: |
+        query는 정류장명과 주소를 검색한다. origin은 `lat,lon` 한 필드로 보내며,
+        값이 있으면 각 결과의 walk_minutes를 계산한다. 정밀 검색어와
+        원점 좌표는 access/application log에 기록하지 않는다.
+      parameters:
+        - name: query
+          in: query
+          required: false
+          description: 정류장명 또는 주소 검색어. 원문을 로그·trace·analytics에 남기지 않는다.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 80
+        - name: bbox
+          in: query
+          required: false
+          description: minLon,minLat,maxLon,maxLat. 생략하면 서버 기본 영역을 사용한다.
+          schema:
+            type: string
+            maxLength: 100
+            pattern: '^-?[0-9]+(?:\.[0-9]+)?,-?[0-9]+(?:\.[0-9]+)?,-?[0-9]+(?:\.[0-9]+)?,-?[0-9]+(?:\.[0-9]+)?$'
+        - name: origin
+          in: query
+          required: false
+          description: 도보시간 계산 원점 `lat,lon`. 위도 -90~90, 경도 -180~180을 서버에서 검증하며 원문을 로그에 남기지 않는다.
+          schema:
+            type: string
+            maxLength: 64
+            pattern: '^-?[0-9]+(?:\.[0-9]+)?,-?[0-9]+(?:\.[0-9]+)?$'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 200
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 256
+      responses:
+        '200':
+          description: 정류장 목록
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StationListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/stations/{station_id}:
+    get:
+      tags: [Stations]
+      operationId: getStation
+      summary: 정류장 최신 상태 조회
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      responses:
+        '200':
+          description: 정류장 최신 상태
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StationState'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/stations/{station_id}/forecast:
+    get:
+      tags: [Forecast]
+      operationId: getStationForecast
+      summary: 도착 시점 재고 의사결정 신호 조회
+      description: |
+        decision_signal과 action.code는 결정적 예측·정책 코드가 만든다. explanation.source가
+        llm이어도 LLM은 이미 결정된 facts와 action을 표현했을 뿐이다.
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+        - name: eta_minutes
+          in: query
+          required: false
+          schema:
+            type: integer
+            const: 15
+            default: 15
+      responses:
+        '200':
+          description: 예측 결과
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/reports:
+    post:
+      tags: [Reports]
+      operationId: createReport
+      summary: 익명 커뮤니티 신고 생성
+      description: |
+        사진은 MVP 범위 밖이며 JSON 본문만 받는다. 응답의 capability_token은
+        이 신고의 조회·취소에만 사용하고 로그나 URL에 남기면 안 된다.
+      security:
+        - AnonymousSession: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportCreateRequest'
+      responses:
+        '201':
+          description: 신고 생성 또는 동일 멱등 요청의 최초 응답 재생
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+            Idempotency-Replayed:
+              $ref: '#/components/headers/IdempotencyReplayed'
+            X-Request-ID:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportCreatedResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/v1/reports/{report_id}:
+    get:
+      tags: [Reports]
+      operationId: getReport
+      summary: 내 익명 신고 조회
+      description: report_id를 아는 것만으로는 부족하며 생성 session과 capability가 모두 필요하다.
+      security:
+        - AnonymousSession: []
+          ReportCapability: []
+      parameters:
+        - $ref: '#/components/parameters/ReportId'
+      responses:
+        '200':
+          description: 신고 상태
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+            X-Request-ID:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/v1/reports/{report_id}/cancel:
+    post:
+      tags: [Reports]
+      operationId: cancelReport
+      summary: 내 익명 신고 취소 및 본문 삭제 요청
+      security:
+        - AnonymousSession: []
+          ReportCapability: []
+      parameters:
+        - $ref: '#/components/parameters/ReportId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: 취소 완료 또는 동일 멱등 요청 재생
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+            Idempotency-Replayed:
+              $ref: '#/components/headers/IdempotencyReplayed'
+            X-Request-ID:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportCancelResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/v1/inventory-signals/{signal_id}/feedback:
+    post:
+      tags: [Feedback]
+      operationId: createInventorySignalFeedback
+      summary: 재고 정체 신호 피드백 등록
+      description: 피드백은 모델 평가 자료이며 공식 정비 상태를 직접 바꾸지 않는다.
+      security:
+        - AnonymousSession: []
+      parameters:
+        - $ref: '#/components/parameters/SignalId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+      responses:
+        '201':
+          description: 피드백 기록 또는 동일 멱등 요청 재생
+          headers:
+            Idempotency-Replayed:
+              $ref: '#/components/headers/IdempotencyReplayed'
+            X-Request-ID:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/v1/health:
+    get:
+      tags: [Health]
+      operationId: getHealth
+      summary: 비민감 서비스 상태 조회
+      description: LLM 장애는 degraded일 수 있으나 forecast 전체를 unavailable로 만들지 않는다.
+      responses:
+        '200':
+          description: 정상 또는 부분 저하
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+components:
+  securitySchemes:
+    AnonymousSession:
+      type: apiKey
+      in: cookie
+      name: tashucast_session
+      description: 서버 발급 signed session cookie. 사용자·기기 식별자가 아니다.
+    ReportCapability:
+      type: apiKey
+      in: header
+      name: X-Report-Capability
+      description: 특정 report의 read/cancel scope에만 유효한 비밀 token
+
+  parameters:
+    StationId:
+      name: station_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/StationId'
+    ReportId:
+      name: report_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SignalId:
+      name: signal_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CsrfToken:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      description: 익명 session 발급 응답에서 받은 CSRF token
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 256
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        8~128자의 요청별 고유 키. 같은 session·method·path·key와 같은 body는
+        24시간 동안 최초 응답을 재생하고, body가 다르면 409를 반환한다.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+        pattern: '^[A-Za-z0-9._:-]+$'
+
+  headers:
+    CacheControlNoStore:
+      description: session·CSRF·capability 또는 신고 상태를 포함하는 응답의 캐시 금지
+      schema:
+        type: string
+        const: no-store
+    RequestId:
+      description: 로그·trace 상관관계용 비식별 요청 ID
+      schema:
+        type: string
+        maxLength: 128
+    IdempotencyReplayed:
+      description: true이면 서버가 최초 멱등 응답을 재생함
+      schema:
+        type: boolean
+    RetryAfter:
+      description: 재시도 전 대기할 초
+      schema:
+        type: integer
+        minimum: 1
+
+  responses:
+    BadRequest:
+      description: 잘못된 요청
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Unauthorized:
+      description: 익명 session이 없거나 만료됨
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Forbidden:
+      description: capability 또는 CSRF 검증 실패
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: 리소스를 찾을 수 없음
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Conflict:
+      description: 멱등 키 충돌 또는 허용되지 않는 상태 전이
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    PayloadTooLarge:
+      description: 요청 본문이 16 KiB 제한을 초과함
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UnprocessableEntity:
+      description: JSON schema 검증 실패
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    RateLimited:
+      description: 요청 한도 초과
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+        X-Request-ID:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ServiceUnavailable:
+      description: 핵심 의존성 사용 불가
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+        X-Request-ID:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+  schemas:
+    StationId:
+      type: string
+      minLength: 2
+      maxLength: 32
+      pattern: '^[A-Za-z0-9_-]+$'
+      examples: [ST0031]
+
+    AnonymousSessionResponse:
+      type: object
+      additionalProperties: false
+      required: [issued_at, expires_at, csrf_token]
+      properties:
+        issued_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+          description: issued_at보다 늦고 issued_at+24시간 이하여야 하며 애플리케이션이 검증한다.
+        csrf_token:
+          type: string
+          minLength: 16
+          maxLength: 256
+          description: 메모리 보관 권장. 로그 또는 URL에 넣지 않는다.
+
+    StationListResponse:
+      type: object
+      additionalProperties: false
+      required: [as_of, data_source, stations, next_cursor]
+      properties:
+        as_of:
+          type: string
+          format: date-time
+        data_source:
+          $ref: '#/components/schemas/DataSource'
+        stations:
+          type: array
+          maxItems: 500
+          items:
+            $ref: '#/components/schemas/StationState'
+        next_cursor:
+          type: [string, 'null']
+          maxLength: 256
+
+    StationState:
+      type: object
+      additionalProperties: false
+      allOf:
+        - $ref: '#/components/schemas/FreshnessDecisionCompatibility'
+        - $ref: '#/components/schemas/StationInventoryCompatibility'
+        - $ref: '#/components/schemas/OfficialMaintenanceCompatibility'
+        - $ref: '#/components/schemas/SyntheticContextCompatibility'
+      required:
+        - station_id
+        - name
+        - address
+        - lat
+        - lon
+        - walk_minutes
+        - data_source
+        - inventory
+        - data_freshness
+        - freshness_detail
+        - decision_signal
+        - inventory_signal
+        - inventory_signal_detail
+        - community_report_state
+        - community_report_summary
+        - official_maintenance_state
+        - official_maintenance_detail
+      properties:
+        station_id:
+          $ref: '#/components/schemas/StationId'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        address:
+          type: [string, 'null']
+          maxLength: 240
+          description: 원천 주소가 없으면 null
+        lat:
+          type: number
+          minimum: -90
+          maximum: 90
+        lon:
+          type: number
+          minimum: -180
+          maximum: 180
+        walk_minutes:
+          type: [integer, 'null']
+          minimum: 0
+          maximum: 240
+          description: /stations에 origin을 제공하면 non-null인 예상 도보시간, 그 외에는 null. 실제 도착시간을 보장하지 않는다.
+        data_source:
+          $ref: '#/components/schemas/DataSource'
+        inventory:
+          anyOf:
+            - $ref: '#/components/schemas/OfficialInventory'
+            - type: 'null'
+        data_freshness:
+          $ref: '#/components/schemas/DataFreshness'
+        freshness_detail:
+          $ref: '#/components/schemas/FreshnessDetail'
+        decision_signal:
+          $ref: '#/components/schemas/DecisionSignal'
+        inventory_signal:
+          $ref: '#/components/schemas/InventorySignal'
+        inventory_signal_detail:
+          $ref: '#/components/schemas/InventorySignalDetail'
+        community_report_state:
+          $ref: '#/components/schemas/CommunityReportState'
+        community_report_summary:
+          $ref: '#/components/schemas/CommunityReportSummary'
+        official_maintenance_state:
+          $ref: '#/components/schemas/OfficialMaintenanceState'
+        official_maintenance_detail:
+          $ref: '#/components/schemas/OfficialMaintenanceDetail'
+
+    OfficialInventory:
+      type: object
+      additionalProperties: false
+      required: [bikes_available, observed_at]
+      properties:
+        bikes_available:
+          type: integer
+          minimum: 0
+        observed_at:
+          type: string
+          format: date-time
+
+    DataFreshness:
+      type: string
+      enum: [fresh, stale, unavailable]
+
+    DataSource:
+      type: string
+      enum: [live_datago, live_direct, demo]
+
+    FreshnessDecisionCompatibility:
+      description: 데이터 최신성과 결정 신호 mode의 허용 조합을 공통으로 강제한다.
+      oneOf:
+        - type: object
+          required: [data_freshness, decision_signal]
+          properties:
+            data_freshness:
+              const: fresh
+            decision_signal:
+              type: object
+              required: [mode]
+              properties:
+                mode:
+                  enum: [stockout_risk, current_stock]
+        - type: object
+          required: [data_freshness, decision_signal]
+          properties:
+            data_freshness:
+              enum: [stale, unavailable]
+            decision_signal:
+              type: object
+              required: [mode]
+              properties:
+                mode:
+                  enum: [demand_pressure, unavailable]
+
+    StationInventoryCompatibility:
+      description: StationState가 fresh이면 현재 공식 재고 객체가 반드시 존재한다.
+      if:
+        type: object
+        required: [data_freshness]
+        properties:
+          data_freshness:
+            const: fresh
+      then:
+        type: object
+        required: [inventory]
+        properties:
+          inventory:
+            $ref: '#/components/schemas/OfficialInventory'
+
+    FreshnessDetail:
+      type: object
+      additionalProperties: false
+      description: |
+        unavailable_after_seconds는 항상 stale_after_seconds보다 커야 한다.
+        observed_at이 non-null이면 observed_at_basis도 non-null이어야 한다.
+        basis=source_observed_at이면 observed_at은 원천 제공 시각이고,
+        basis=collected_at이면 observed_at은 우리 collected_at과 같은 값이다.
+        성공 관측이 없는 unavailable 상태에서는 세 필드가 모두 null일 수 있다.
+        이 교차 필드 불변식은 애플리케이션과 계약 테스트가 검증한다.
+      required:
+        - observed_at
+        - collected_at
+        - observed_at_basis
+        - ingested_at
+        - age_seconds
+        - stale_after_seconds
+        - unavailable_after_seconds
+        - last_error_code
+      properties:
+        observed_at:
+          type: [string, 'null']
+          format: date-time
+          description: observed_at_basis가 가리키는 외부 계약 기준시각
+        collected_at:
+          type: [string, 'null']
+          format: date-time
+          description: 우리 수집기가 원격 응답 또는 fixture를 수집 완료한 시각
+        observed_at_basis:
+          type: [string, 'null']
+          enum: [source_observed_at, collected_at, null]
+          description: observed_at의 출처. observed_at이 null이면 null이어야 한다.
+        ingested_at:
+          type: [string, 'null']
+          format: date-time
+          description: 정규화된 snapshot을 우리 저장소에 기록한 시각
+        age_seconds:
+          type: [integer, 'null']
+          minimum: 0
+        stale_after_seconds:
+          type: integer
+          minimum: 1
+        unavailable_after_seconds:
+          type: integer
+          minimum: 1
+        last_error_code:
+          type: [string, 'null']
+          enum: [timeout, auth, rate_limited, schema, upstream_5xx, unknown, null]
+
+    PredictionBasis:
+      type: string
+      enum: [contextual_ml, inventory_temporal, historical_demand]
+      description: |
+        contextual_ml은 승인된 날씨·달력·행사·공간 맥락을 point-in-time으로
+        조립한 보정 stockout 모델, inventory_temporal은 fresh 공식 재고 lag/rolling과
+        시간 특징만 사용하는 별도 보정 stockout 폴백, historical_demand는 snapshot이
+        없을 때의 과거 trip 수요 기준선이다. current_stock/unavailable에서는 null이다.
+
+    ContextStatus:
+      type: string
+      enum: [complete, partial, unavailable]
+      description: |
+        feature contract의 필수 맥락 가용 상태. 공식 재고의 data_freshness와
+        독립이며, 결측을 0 또는 '없음'으로 해석하지 않는다.
+
+    ContextEvidenceKind:
+      type: string
+      enum: [weather, calendar, event, neighbor, inventory]
+
+    ContextEvidenceFreshness:
+      type: string
+      enum: [fresh, stale, unavailable]
+      description: 해당 맥락 자체의 최신성. 공식 재고 data_freshness가 아니다.
+
+    ContextEvidenceDirection:
+      type: string
+      enum: [toward_high, toward_low, neutral]
+      description: 현재 decision signal의 grade 방향과의 연관이며 인과관계 주장이 아니다.
+
+    ContextEvidence:
+      type: object
+      additionalProperties: false
+      required: [kind, source, issued_at, valid_at, freshness, direction, synthetic]
+      properties:
+        kind:
+          $ref: '#/components/schemas/ContextEvidenceKind'
+        source:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: 공개 가능한 source 이름/version. API key와 credential-bearing URL 금지.
+        issued_at:
+          type: [string, 'null']
+          format: date-time
+          description: 원천이 제공한 예보·일정 version 발행시각. 직접 관측은 null 가능.
+        valid_at:
+          type: string
+          format: date-time
+          description: 이 evidence가 설명하는 목표·관측 기준시각
+        freshness:
+          $ref: '#/components/schemas/ContextEvidenceFreshness'
+        direction:
+          $ref: '#/components/schemas/ContextEvidenceDirection'
+        synthetic:
+          type: boolean
+          description: true이면 이 evidence를 사용한 전체 응답의 data_source는 demo여야 한다.
+
+    ContextualPredictionCompatibility:
+      description: contextual_ml은 완전하고 fresh한 point-in-time evidence에서만 허용한다.
+      if:
+        properties:
+          prediction_basis:
+            const: contextual_ml
+        required: [prediction_basis]
+      then:
+        properties:
+          context_status:
+            const: complete
+          context_evidence:
+            minItems: 1
+            maxItems: 2
+            contains:
+              properties:
+                kind:
+                  enum: [weather, calendar, event, neighbor]
+              required: [kind]
+            minContains: 1
+            items:
+              allOf:
+                - $ref: '#/components/schemas/ContextEvidence'
+                - properties:
+                    freshness:
+                      const: fresh
+
+    InventoryTemporalPredictionCompatibility:
+      description: inventory_temporal은 fresh 공식 재고 lag/rolling+시간 근거만 허용한다.
+      if:
+        properties:
+          prediction_basis:
+            const: inventory_temporal
+        required: [prediction_basis]
+      then:
+        properties:
+          context_evidence:
+            minItems: 1
+            maxItems: 2
+            items:
+              allOf:
+                - $ref: '#/components/schemas/ContextEvidence'
+                - properties:
+                    kind:
+                      const: inventory
+                    freshness:
+                      const: fresh
+
+    SyntheticContextCompatibility:
+      description: 합성 context evidence를 사용한 응답은 공식 재고가 live여도 demo다.
+      if:
+        properties:
+          decision_signal:
+            properties:
+              context_evidence:
+                contains:
+                  properties:
+                    synthetic:
+                      const: true
+                  required: [synthetic]
+            required: [context_evidence]
+        required: [decision_signal]
+      then:
+        properties:
+          data_source:
+            const: demo
+
+    DecisionSignal:
+      description: |
+        mode가 stockout_risk이면 stockout_probability와 stockout_risk_grade만,
+        demand_pressure이면 demand_pressure_grade만 non-null이다. current_stock과
+        unavailable에서는 probability와 두 grade가 모두 null이다. 서로 다른 mode의
+        출력이 동시에 non-null일 수 없다. stockout_probability는 대여 성공 확률이
+        아니라 정확히 t+15 공식 API 재고가 1대 미만일 보정 확률이다.
+        context_status는 공식 data_freshness와 독립이다. contextual_ml은 complete
+        context에서만, inventory_temporal은 fresh 공식 재고 근거에서만 허용한다.
+        demand_pressure는 historical_demand basis만 사용한다.
+      oneOf:
+        - $ref: '#/components/schemas/StockoutRiskDecisionSignal'
+        - $ref: '#/components/schemas/DemandPressureDecisionSignal'
+        - $ref: '#/components/schemas/CurrentStockDecisionSignal'
+        - $ref: '#/components/schemas/UnavailableDecisionSignal'
+      discriminator:
+        propertyName: mode
+        mapping:
+          stockout_risk: '#/components/schemas/StockoutRiskDecisionSignal'
+          demand_pressure: '#/components/schemas/DemandPressureDecisionSignal'
+          current_stock: '#/components/schemas/CurrentStockDecisionSignal'
+          unavailable: '#/components/schemas/UnavailableDecisionSignal'
+
+    StockoutRiskDecisionSignal:
+      type: object
+      additionalProperties: false
+      required: [mode, stockout_probability, stockout_risk_grade, demand_pressure_grade, grade_direction, threshold_version, prediction_basis, context_status, feature_contract_version, calibration_version, context_evidence, generated_at, valid_until, model_version]
+      allOf:
+        - $ref: '#/components/schemas/ContextualPredictionCompatibility'
+        - $ref: '#/components/schemas/InventoryTemporalPredictionCompatibility'
+      properties:
+        mode:
+          type: string
+          const: stockout_risk
+        stockout_probability:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: 보정된 P(parking_count(t+15분) < 1). 실제 대여 성공·정상 자전거·고장 확률이 아니다.
+        stockout_risk_grade:
+          type: string
+          enum: [low, medium, high]
+        demand_pressure_grade:
+          type: 'null'
+        grade_direction:
+          type: string
+          const: higher_means_higher_stockout_risk
+          description: low→medium→high 순으로 재고 소진 위험이 커진다.
+        threshold_version:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: low/medium/high 경계를 정의한 버전
+        prediction_basis:
+          type: string
+          enum: [contextual_ml, inventory_temporal]
+        context_status:
+          $ref: '#/components/schemas/ContextStatus'
+        feature_contract_version:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: point-in-time 필드·단위·TTL·결측·join 규칙의 승인 버전
+        calibration_version:
+          type: string
+          minLength: 1
+          maxLength: 80
+        context_evidence:
+          type: array
+          maxItems: 2
+          items:
+            $ref: '#/components/schemas/ContextEvidence'
+        generated_at:
+          type: string
+          format: date-time
+        valid_until:
+          type: string
+          format: date-time
+        model_version:
+          type: string
+          minLength: 1
+          maxLength: 80
+
+    DemandPressureDecisionSignal:
+      type: object
+      additionalProperties: false
+      required: [mode, stockout_probability, stockout_risk_grade, demand_pressure_grade, grade_direction, threshold_version, prediction_basis, context_status, feature_contract_version, calibration_version, context_evidence, generated_at, valid_until, model_version]
+      properties:
+        mode:
+          type: string
+          const: demand_pressure
+        stockout_probability:
+          type: 'null'
+        stockout_risk_grade:
+          type: 'null'
+        demand_pressure_grade:
+          type: string
+          enum: [low, medium, high]
+        grade_direction:
+          type: string
+          const: higher_means_higher_demand_pressure
+          description: low→medium→high 순으로 과거 기반 수요 압력이 커진다.
+        threshold_version:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: low/medium/high 경계를 정의한 버전
+        prediction_basis:
+          type: string
+          const: historical_demand
+        context_status:
+          type: string
+          const: unavailable
+        feature_contract_version:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: point-in-time 필드·단위·TTL·결측·join 규칙의 승인 버전
+        calibration_version:
+          type: 'null'
+          description: 과거 trip percentile/등급 기준선은 확률 calibration을 주장하지 않는다.
+        context_evidence:
+          type: array
+          maxItems: 0
+          items:
+            $ref: '#/components/schemas/ContextEvidence'
+        generated_at:
+          type: string
+          format: date-time
+        valid_until:
+          type: string
+          format: date-time
+        model_version:
+          type: string
+          minLength: 1
+          maxLength: 80
+
+    CurrentStockDecisionSignal:
+      type: object
+      additionalProperties: false
+      required: [mode, stockout_probability, stockout_risk_grade, demand_pressure_grade, prediction_basis, context_status, feature_contract_version, calibration_version, context_evidence, generated_at, valid_until, model_version]
+      properties:
+        mode:
+          type: string
+          const: current_stock
+        stockout_probability:
+          type: 'null'
+        stockout_risk_grade:
+          type: 'null'
+        demand_pressure_grade:
+          type: 'null'
+        prediction_basis:
+          type: 'null'
+        context_status:
+          $ref: '#/components/schemas/ContextStatus'
+        feature_contract_version:
+          type: 'null'
+        calibration_version:
+          type: 'null'
+        context_evidence:
+          type: array
+          maxItems: 0
+          items:
+            $ref: '#/components/schemas/ContextEvidence'
+        generated_at:
+          type: string
+          format: date-time
+        valid_until:
+          type: string
+          format: date-time
+        model_version:
+          type: string
+          maxLength: 80
+
+    UnavailableDecisionSignal:
+      type: object
+      additionalProperties: false
+      required: [mode, stockout_probability, stockout_risk_grade, demand_pressure_grade, prediction_basis, context_status, feature_contract_version, calibration_version, context_evidence, generated_at, valid_until, model_version]
+      properties:
+        mode:
+          type: string
+          const: unavailable
+        stockout_probability:
+          type: 'null'
+        stockout_risk_grade:
+          type: 'null'
+        demand_pressure_grade:
+          type: 'null'
+        prediction_basis:
+          type: 'null'
+        context_status:
+          $ref: '#/components/schemas/ContextStatus'
+        feature_contract_version:
+          type: 'null'
+        calibration_version:
+          type: 'null'
+        context_evidence:
+          type: array
+          maxItems: 0
+          items:
+            $ref: '#/components/schemas/ContextEvidence'
+        generated_at:
+          type: string
+          format: date-time
+        valid_until:
+          type: string
+          format: date-time
+        model_version:
+          type: string
+          maxLength: 80
+
+    InventorySignal:
+      type: string
+      enum: [none, collecting, stagnant, under_review]
+      description: 데이터 평가 공개 게이트 전에는 collecting만 사용자 응답에 허용한다.
+
+    InventorySignalDetail:
+      type: object
+      additionalProperties: false
+      required: [signal_id, evidence_codes, disclaimer]
+      properties:
+        signal_id:
+          type: [string, 'null']
+          format: uuid
+        evidence_codes:
+          type: array
+          maxItems: 8
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - long_stagnation
+              - neighbor_divergence
+              - insufficient_history
+        disclaimer:
+          type: string
+          const: 재고 정체 신호이며 개별 자전거 고장 확정이 아닙니다.
+
+    CommunityReportState:
+      type: string
+      enum: [none, recent, corroborated, expired]
+      description: corroborated는 같은 정류장·같은 category가 유효기간 안에 분리된 signed 익명 session에서 반복 제출됐다는 뜻이며, 서로 다른 실제 사람이나 공식 사실을 증명하지 않는다.
+
+    CommunityReportSummary:
+      type: object
+      additionalProperties: false
+      required: [active_report_count, last_reported_at, unverified]
+      properties:
+        active_report_count:
+          type: integer
+          minimum: 0
+        last_reported_at:
+          type: [string, 'null']
+          format: date-time
+        unverified:
+          type: boolean
+          const: true
+
+    OfficialMaintenanceState:
+      type: string
+      enum: [unavailable, unknown, confirmed_fault, under_repair, resolved]
+
+    OfficialMaintenanceDetail:
+      type: object
+      additionalProperties: false
+      required: [verified, updated_at, source]
+      properties:
+        verified:
+          type: boolean
+          description: true는 인증된 운영기관 소스에서만 가능하다.
+        updated_at:
+          type: [string, 'null']
+          format: date-time
+        source:
+          type: [string, 'null']
+          maxLength: 120
+          description: 인증된 공식 연동 또는 운영기관 기록의 출처 식별자
+
+    OfficialMaintenanceCompatibility:
+      description: 공식 정비 상태와 검증·출처 메타데이터의 허용 조합을 강제한다.
+      oneOf:
+        - type: object
+          required: [official_maintenance_state, official_maintenance_detail]
+          properties:
+            official_maintenance_state:
+              const: unavailable
+            official_maintenance_detail:
+              type: object
+              required: [verified, updated_at, source]
+              properties:
+                verified:
+                  const: false
+                updated_at:
+                  type: 'null'
+                source:
+                  type: 'null'
+        - type: object
+          required: [official_maintenance_state, official_maintenance_detail]
+          properties:
+            official_maintenance_state:
+              enum: [unknown, confirmed_fault, under_repair, resolved]
+            official_maintenance_detail:
+              type: object
+              required: [verified, updated_at, source]
+              properties:
+                verified:
+                  const: true
+                updated_at:
+                  type: string
+                  format: date-time
+                source:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+
+    ForecastResponse:
+      type: object
+      additionalProperties: false
+      allOf:
+        - $ref: '#/components/schemas/FreshnessDecisionCompatibility'
+        - $ref: '#/components/schemas/OfficialMaintenanceCompatibility'
+        - $ref: '#/components/schemas/SyntheticContextCompatibility'
+      required:
+        - station_id
+        - generated_at
+        - eta_minutes
+        - data_source
+        - data_freshness
+        - freshness_detail
+        - decision_signal
+        - inventory_signal
+        - inventory_signal_detail
+        - community_report_state
+        - community_report_summary
+        - official_maintenance_state
+        - official_maintenance_detail
+        - action
+        - explanation
+        - alternatives
+      properties:
+        station_id:
+          $ref: '#/components/schemas/StationId'
+        generated_at:
+          type: string
+          format: date-time
+        eta_minutes:
+          type: integer
+          const: 15
+        data_source:
+          $ref: '#/components/schemas/DataSource'
+        data_freshness:
+          $ref: '#/components/schemas/DataFreshness'
+        freshness_detail:
+          $ref: '#/components/schemas/FreshnessDetail'
+        decision_signal:
+          $ref: '#/components/schemas/DecisionSignal'
+        inventory_signal:
+          $ref: '#/components/schemas/InventorySignal'
+        inventory_signal_detail:
+          $ref: '#/components/schemas/InventorySignalDetail'
+        community_report_state:
+          $ref: '#/components/schemas/CommunityReportState'
+        community_report_summary:
+          $ref: '#/components/schemas/CommunityReportSummary'
+        official_maintenance_state:
+          $ref: '#/components/schemas/OfficialMaintenanceState'
+        official_maintenance_detail:
+          $ref: '#/components/schemas/OfficialMaintenanceDetail'
+        action:
+          $ref: '#/components/schemas/PolicyAction'
+        explanation:
+          $ref: '#/components/schemas/Explanation'
+        alternatives:
+          type: array
+          maxItems: 3
+          description: data_freshness=fresh인 후보만 포함하며 가까운 순 또는 policy 순으로 정렬한다.
+          items:
+            $ref: '#/components/schemas/AlternativeStation'
+
+    PolicyAction:
+      type: object
+      additionalProperties: false
+      required: [code, policy_version]
+      properties:
+        code:
+          $ref: '#/components/schemas/PolicyActionCode'
+        policy_version:
+          type: string
+          maxLength: 80
+          description: LLM이 아닌 결정적 policy 버전
+
+    PolicyActionCode:
+      type: string
+      enum:
+        - proceed_with_caution
+        - consider_alternative
+        - check_official_app
+        - wait_for_fresh_data
+        - no_recommendation
+
+    Explanation:
+      type: object
+      additionalProperties: false
+      required: [source, text, fact_keys, template_id, llm_model]
+      properties:
+        source:
+          type: string
+          enum: [template, llm]
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+        fact_keys:
+          type: array
+          maxItems: 8
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - inventory_age_seconds
+              - current_bikes
+              - decision_signal_mode
+              - stockout_risk_grade
+              - demand_pressure_grade
+              - prediction_basis
+              - context_status
+              - context_evidence
+              - inventory_signal
+              - community_report_count
+              - official_maintenance_state
+              - alternative_station
+        template_id:
+          type: string
+          maxLength: 80
+        llm_model:
+          type: [string, 'null']
+          maxLength: 100
+
+    AlternativeStation:
+      type: object
+      additionalProperties: false
+      description: 추천 후보는 반드시 data_freshness=fresh여야 한다.
+      allOf:
+        - $ref: '#/components/schemas/FreshnessDecisionCompatibility'
+        - $ref: '#/components/schemas/SyntheticContextCompatibility'
+      required:
+        - station_id
+        - name
+        - walk_minutes
+        - inventory
+        - data_source
+        - data_freshness
+        - freshness_detail
+        - decision_signal
+      properties:
+        station_id:
+          $ref: '#/components/schemas/StationId'
+        name:
+          type: string
+          maxLength: 120
+        walk_minutes:
+          type: integer
+          minimum: 0
+          maximum: 120
+          description: 버전 고정 거리/경로 adapter가 계산한 예상 도보시간
+        inventory:
+          $ref: '#/components/schemas/OfficialInventory'
+        data_source:
+          $ref: '#/components/schemas/DataSource'
+        data_freshness:
+          type: string
+          const: fresh
+        freshness_detail:
+          $ref: '#/components/schemas/FreshnessDetail'
+        decision_signal:
+          $ref: '#/components/schemas/DecisionSignal'
+
+    ReportCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [station_id, category, privacy_notice_version]
+      properties:
+        station_id:
+          $ref: '#/components/schemas/StationId'
+        category:
+          $ref: '#/components/schemas/ReportCategory'
+        description:
+          type: [string, 'null']
+          maxLength: 200
+          description: 이름, 전화번호, 학번, 이동경로 등 개인정보를 입력하지 않는다.
+        bike_reference:
+          type: [string, 'null']
+          maxLength: 40
+          description: 사용자가 보거나 스캔한 선택적 참조값. 검증된 자전거 식별자나 기기 ID가 아니다.
+        privacy_notice_version:
+          type: string
+          minLength: 1
+          maxLength: 40
+
+    ReportCreatedResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - report_id
+        - status
+        - created_at
+        - cancel_until
+        - capability_token
+        - capability_expires_at
+      properties:
+        report_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          const: received
+        created_at:
+          type: string
+          format: date-time
+        cancel_until:
+          type: string
+          format: date-time
+        capability_token:
+          type: string
+          minLength: 43
+          maxLength: 2048
+          description: 생성 및 동일 멱등 요청의 응답 재생에서만 반환되는 report-scoped secret. 이후 조회 API로 복구할 수 없으며 URL·로그 저장 금지.
+        capability_expires_at:
+          type: string
+          format: date-time
+
+    ReportResponse:
+      type: object
+      additionalProperties: false
+      required: [report_id, station_id, category, status, created_at, cancel_until, timeline]
+      properties:
+        report_id:
+          type: string
+          format: uuid
+        station_id:
+          $ref: '#/components/schemas/StationId'
+        category:
+          $ref: '#/components/schemas/ReportCategory'
+        status:
+          $ref: '#/components/schemas/ReportStatus'
+        created_at:
+          type: string
+          format: date-time
+        cancel_until:
+          type: string
+          format: date-time
+        timeline:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ReportTimelineItem'
+
+    ReportTimelineItem:
+      type: object
+      additionalProperties: false
+      required: [at, status]
+      properties:
+        at:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/ReportStatus'
+
+    ReportCancelResponse:
+      type: object
+      additionalProperties: false
+      required: [report_id, status, content_deletion_due_at]
+      properties:
+        report_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          const: cancelled
+        content_deletion_due_at:
+          type: string
+          format: date-time
+
+    ReportCategory:
+      type: string
+      enum:
+        - unlock_failure
+        - battery_or_power
+        - physical_damage
+        - count_mismatch
+        - safety_risk
+        - other
+
+    ReportStatus:
+      type: string
+      enum: [received, community_corroborated, cancelled, expired]
+
+    FeedbackRequest:
+      type: object
+      additionalProperties: false
+      required: [assessment]
+      properties:
+        assessment:
+          $ref: '#/components/schemas/FeedbackAssessment'
+        reason:
+          type: [string, 'null']
+          maxLength: 200
+
+    FeedbackAssessment:
+      type: string
+      enum: [accurate, inaccurate, unsure]
+
+    FeedbackResponse:
+      type: object
+      additionalProperties: false
+      required: [feedback_id, recorded_at]
+      properties:
+        feedback_id:
+          type: string
+          format: uuid
+        recorded_at:
+          type: string
+          format: date-time
+
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status, data_source, checked_at, ingestion, database, explanation]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        data_source:
+          $ref: '#/components/schemas/DataSource'
+        checked_at:
+          type: string
+          format: date-time
+        ingestion:
+          $ref: '#/components/schemas/DataFreshness'
+        database:
+          type: string
+          enum: [ok, unavailable]
+        explanation:
+          type: string
+          enum: [template_only, llm_available, llm_degraded]
+
+    Problem:
+      type: object
+      additionalProperties: false
+      required: [type, title, status, code, detail, request_id]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+          maxLength: 120
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        code:
+          type: string
+          enum:
+            - INVALID_REQUEST
+            - VALIDATION_FAILED
+            - SESSION_REQUIRED
+            - CSRF_INVALID
+            - CAPABILITY_INVALID
+            - NOT_FOUND
+            - IDEMPOTENCY_CONFLICT
+            - STATE_CONFLICT
+            - PAYLOAD_TOO_LARGE
+            - RATE_LIMITED
+            - SERVICE_UNAVAILABLE
+        detail:
+          type: string
+          maxLength: 500
+        instance:
+          type: [string, 'null']
+          format: uri-reference
+        request_id:
+          type: string
+          maxLength: 128
+        errors:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/FieldError'
+
+    FieldError:
+      type: object
+      additionalProperties: false
+      required: [field, reason]
+      properties:
+        field:
+          type: string
+          maxLength: 120
+        reason:
+          type: string
+          maxLength: 240

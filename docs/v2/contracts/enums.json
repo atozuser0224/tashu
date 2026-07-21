@@ -1,0 +1,101 @@
+{
+  "schema_version": "2.1.0",
+  "data_freshness": {
+    "fresh": "최신 정보",
+    "stale": "정보 지연",
+    "unavailable": "정보 없음"
+  },
+  "decision_signal_mode": {
+    "stockout_risk": "15분 재고 소진 위험",
+    "demand_pressure": "15분 수요 압력",
+    "current_stock": "현재 공식 재고",
+    "unavailable": "분석 불가"
+  },
+  "prediction_basis": {
+    "contextual_ml": "검증된 맥락 학습 모델",
+    "inventory_temporal": "공식 재고 lag·시간 이력 모델",
+    "historical_demand": "과거 trip 수요 기준선"
+  },
+  "context_status": {
+    "complete": "필수 맥락 완전",
+    "partial": "필수 맥락 일부 누락",
+    "unavailable": "검증 가능한 맥락 없음"
+  },
+  "context_evidence_kind": {
+    "weather": "날씨",
+    "calendar": "달력",
+    "event": "행사",
+    "neighbor": "인접 정류장",
+    "inventory": "공식 재고 이력"
+  },
+  "context_evidence_freshness": {
+    "fresh": "해당 맥락 최신",
+    "stale": "해당 맥락 지연",
+    "unavailable": "해당 맥락 없음"
+  },
+  "context_evidence_direction": {
+    "toward_high": "현재 신호의 높은 등급 방향",
+    "toward_low": "현재 신호의 낮은 등급 방향",
+    "neutral": "방향 없음 또는 불확실"
+  },
+  "stockout_risk_grade": {
+    "low": "소진 위험 낮음",
+    "medium": "소진 위험 보통",
+    "high": "소진 위험 높음"
+  },
+  "demand_pressure_grade": {
+    "low": "과거 대여 수요 낮음",
+    "medium": "과거 대여 수요 보통",
+    "high": "과거 대여 수요 높음"
+  },
+  "inventory_signal": {
+    "none": "특이 신호 없음",
+    "collecting": "데이터 수집 중",
+    "stagnant": "재고 정체 신호",
+    "under_review": "신호 검토 중"
+  },
+  "community_report_state": {
+    "none": "최근 신고 없음",
+    "recent": "최근 커뮤니티 신고",
+    "corroborated": "분리된 익명 세션의 재확인",
+    "expired": "신고 유효기간 만료"
+  },
+  "official_maintenance_state": {
+    "unavailable": "공식 상태 연동 안 됨",
+    "unknown": "공식 처리 상태 미확인",
+    "confirmed_fault": "공식 고장 확인",
+    "under_repair": "공식 정비 중",
+    "resolved": "공식 조치 완료"
+  },
+  "report_category": {
+    "unlock_failure": "잠금 불가",
+    "battery_or_power": "배터리·전원 문제",
+    "physical_damage": "외관·기계 파손",
+    "count_mismatch": "표시 수량 불일치",
+    "safety_risk": "안전 위험",
+    "other": "기타"
+  },
+  "report_status": {
+    "received": "접수",
+    "community_corroborated": "커뮤니티 재확인",
+    "cancelled": "신고자 취소",
+    "expired": "유효기간 만료"
+  },
+  "policy_action": {
+    "proceed_with_caution": "주의해서 진행",
+    "consider_alternative": "대안 정류장 검토",
+    "check_official_app": "타슈 공식 앱 확인",
+    "wait_for_fresh_data": "최신 정보 대기",
+    "no_recommendation": "추천 없음"
+  },
+  "feedback_assessment": {
+    "accurate": "정확함",
+    "inaccurate": "부정확함",
+    "unsure": "판단 어려움"
+  },
+  "data_source": {
+    "live_datago": "공공데이터포털 조회 경로",
+    "live_direct": "타슈 직접 API 조회 경로",
+    "demo": "샘플 데이터"
+  }
+}
