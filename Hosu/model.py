@@ -1,80 +1,42 @@
 """
-타슈 STGNN - A3TGCN (순수 PyTorch 구현)
+A3TGCN 분류 + 양방향 GCN (방향 인접행렬용)
 =================================================
-scatter/sparse 확장 없음 -> CPU/XPU/CUDA 어디서나 device만 바꾸면 동작.
-인접행렬은 사전 정규화된 A (adjacency.npy)를 행렬곱으로 직접 사용.
-
-구조 (A3TGCN 핵심):
-  각 타임스텝: GCN으로 공간 전파 -> 노드 임베딩
-  시퀀스: GRU로 시간 인코딩
-  Attention: 8개 타임스텝을 가중합 (어느 시점이 중요한지 학습)
-  출력: 노드별 다음 회차 flow_z 예측
-
-입력:  X_node [B, W, N, F], X_global [B, W, Fg], A [N, N]
-출력:  y_hat [B, N]
+기존 GCN은 A 한 방향만. 여기선 A(나감)와 Aᵀ(들어옴)를 둘 다 전파해
+'어디로 나가고 어디서 들어오는지' 양방향 경향을 학습.
 """
-import torch
-import torch.nn as nn
+import torch, torch.nn as nn
 
-class GCNLayer(nn.Module):
-    """사전 정규화 A를 쓰는 단순 GCN: H' = A @ H @ W"""
+class BiGCNLayer(nn.Module):
+    """양방향 GCN: A와 Aᵀ로 각각 전파 후 결합."""
     def __init__(self, in_dim, out_dim):
         super().__init__()
-        self.lin = nn.Linear(in_dim, out_dim)
+        self.lin_out=nn.Linear(in_dim,out_dim)   # 나가는 방향 (A)
+        self.lin_in=nn.Linear(in_dim,out_dim)    # 들어오는 방향 (Aᵀ)
     def forward(self, H, A):
-        # H: [B, N, in], A: [N, N]
-        H = self.lin(H)                    # [B, N, out]
-        H = torch.einsum('nm,bmd->bnd', A, H)  # A @ H  (공간 전파)
-        return torch.relu(H)
+        out_dir=torch.einsum('nm,bmd->bnd',A,self.lin_out(H))      # A @ H
+        in_dir=torch.einsum('mn,bmd->bnd',A,self.lin_in(H))        # Aᵀ @ H
+        return torch.relu(out_dir+in_dir)
 
-class A3TGCN(nn.Module):
-    def __init__(self, f_node, f_global, hidden=48, gru_layers=1):
+class A3TGCN_Dir(nn.Module):
+    def __init__(self, f_node, f_global, hidden=48, n_classes=3):
         super().__init__()
-        self.gcn1 = GCNLayer(f_node, hidden)
-        self.gcn2 = GCNLayer(hidden, hidden)
-        # 전역 피처(날씨)를 각 타임스텝 노드 임베딩에 결합
-        self.global_proj = nn.Linear(f_global, hidden)
-        self.gru = nn.GRU(hidden, hidden, num_layers=gru_layers, batch_first=True)
-        # 시간 attention: 각 타임스텝 hidden -> 스칼라 점수
-        self.attn = nn.Linear(hidden, 1)
-        self.head = nn.Linear(hidden, 1)   # 노드별 flow 예측
-
+        self.gcn1=BiGCNLayer(f_node,hidden); self.gcn2=BiGCNLayer(hidden,hidden)
+        self.global_proj=nn.Linear(f_global,hidden)
+        self.gru=nn.GRU(hidden,hidden,batch_first=True)
+        self.attn=nn.Linear(hidden,1); self.head=nn.Linear(hidden,n_classes)
     def forward(self, X_node, X_global, A):
-        B, W, N, F = X_node.shape
-        # 각 타임스텝별 GCN 공간 전파
-        spatial = []
+        B,W,N,F=X_node.shape; sp=[]
         for t in range(W):
-            h = self.gcn1(X_node[:,t], A)     # [B,N,hidden]
-            h = self.gcn2(h, A)               # [B,N,hidden]
-            # 전역 피처(날씨) 결합: 모든 노드에 broadcast
-            g = self.global_proj(X_global[:,t])   # [B,hidden]
-            h = h + g[:,None,:]                    # [B,N,hidden]
-            spatial.append(h)
-        S = torch.stack(spatial, dim=1)   # [B, W, N, hidden]
+            h=self.gcn2(self.gcn1(X_node[:,t],A),A)
+            g=self.global_proj(X_global[:,t])
+            sp.append(h+g[:,None,:])
+        S=torch.stack(sp,1); seq=S.permute(0,2,1,3).reshape(B*N,W,-1)
+        out,_=self.gru(seq); score=self.attn(out).softmax(1)
+        ctx=(out*score).sum(1)
+        return self.head(ctx).reshape(B,N,-1)
 
-        # 노드별로 GRU (시간 인코딩). 노드축을 배치로 접어서 처리
-        Bn = B*N
-        seq = S.permute(0,2,1,3).reshape(Bn, W, -1)   # [B*N, W, hidden]
-        out, _ = self.gru(seq)                          # [B*N, W, hidden]
-
-        # 시간 attention 가중합
-        score = self.attn(out).softmax(dim=1)           # [B*N, W, 1]
-        ctx = (out * score).sum(dim=1)                  # [B*N, hidden]
-
-        y = self.head(ctx).reshape(B, N)                # [B, N]
-        return y
-
-if __name__ == '__main__':
-    torch.manual_seed(0)
-    B,W,N,F,Fg = 4,8,40,12,4
-    model = A3TGCN(F, Fg)
-    Xn = torch.randn(B,W,N,F)
-    Xg = torch.randn(B,W,Fg)
-    A  = torch.randn(N,N); A = (A@A.T).softmax(-1)  # 더미 정규화 A
-    y = model(Xn, Xg, A)
-    print('입력 X_node:', tuple(Xn.shape))
-    print('입력 X_global:', tuple(Xg.shape))
-    print('인접행렬 A:', tuple(A.shape))
-    print('출력 y_hat:', tuple(y.shape), '(기대: (4, 40))')
-    print('파라미터 수:', sum(p.numel() for p in model.parameters()))
-    print('shape 검증:', 'OK' if y.shape==(B,N) else 'FAIL')
+if __name__=='__main__':
+    m=A3TGCN_Dir(17,4)
+    y=m(torch.randn(4,8,40,17),torch.randn(4,8,4),torch.softmax(torch.randn(40,40),-1))
+    print('출력:',tuple(y.shape),'(기대 (4,40,3))')
+    print('파라미터:',sum(p.numel() for p in m.parameters()),'(양방향이라 GCN 파라미터 2배)')

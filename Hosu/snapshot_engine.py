@@ -25,10 +25,11 @@ def load_artifacts():
     """서버 起動시 1회 호출. 모델·데이터를 메모리에 로드해 이후 요청서 재사용."""
     global _ART
     if _ART is not None: return _ART
-    A=torch.tensor(np.load(f'{OUT_DIR}/adjacency.npy')).float()
+    from model_cls_directed import A3TGCN_Dir
+    A=torch.tensor(np.load(f'{OUT_DIR}/adjacency_directed.npy')).float()
     stats=json.load(open(f'{OUT_DIR}/norm_stats.json'))
-    model=A3TGCN(stats['F_node'], 4, hidden=48)
-    model.load_state_dict(torch.load(f'{OUT_DIR}/a3tgcn_v2.pt',map_location='cpu')['state'])
+    model=A3TGCN_Dir(stats['F_node'], 4, hidden=48)
+    model.load_state_dict(torch.load(f'{OUT_DIR}/a3tgcn_dir.pt',map_location='cpu')['state'])
     model.eval()
     _ART=dict(
         X_node=np.load(f'{OUT_DIR}/X_node.npy'),
@@ -107,12 +108,15 @@ def compute_snapshot(date=None, round_id=None, mode='demo', demo_mode=True):
     row=tl.iloc[target]
     ref_time=pd.Timestamp(row['service_date'])+pd.Timedelta(hours=float(ROUND_TIME[row['round_id']].split(':')[0]))
 
-    # STGNN 추론
+    # STGNN 분류 추론: 부족/정상/과잉 확률
     W=8
     xn=torch.tensor(A['X_node'][target-W:target][None]).float()
     xg=torch.tensor(A['X_global'][target-W:target][None]).float()
     with torch.no_grad():
-        pred=A['model'](xn,xg,A['A'])[0].numpy()*A['fsn']+A['fmn']
+        logits=A['model'](xn,xg,A['A'])[0]          # [N,3]
+        probs=torch.softmax(logits,dim=-1).numpy()   # [N,3] 클래스 확률
+    cls=probs.argmax(-1)                             # [N] 0=부족 1=정상 2=과잉
+    CLS_NAMES=['shortage','normal','surplus']
 
     # 고장 (ref_time 기준 재계산)
     target_ids=set(A['node_index']['station_id'])
@@ -132,18 +136,22 @@ def compute_snapshot(date=None, round_id=None, mode='demo', demo_mode=True):
     for i,r in A['node_index'].iterrows():
         sid=r['station_id']; info=A['sm'][A['sm']['station_id']==sid]
         if len(info)==0: continue
-        info=info.iloc[0]; broken=int(bcnt.get(sid,0)); nf=float(pred[i])
+        info=info.iloc[0]; broken=int(bcnt.get(sid,0))
         api=int(avail_arr[i]) if avail_arr is not None else None
         real=max(0,api-broken) if api is not None else None
+        p_short,p_norm,p_surp=float(probs[i,0]),float(probs[i,1]),float(probs[i,2])
         stations.append({"station_id":sid,"station_name":info['name'],
             "location":{"lat":float(info['lat']),"lng":float(info['lng'])},
             "current_weather":{"status":band_to_status(band),"precipitation_mm":round(precip,1),"temperature_c":round(temp,1)},
             "ml_correction":{"api_available":api,"broken_suspected":broken,"real_available":real},
-            "stgnn_prediction":{"predicted_net_flow":round(nf,1),"shortage_pressure":round(float(np.clip(-nf/20,0,1)),2)}})
+            "stgnn_prediction":{
+                "class":CLS_NAMES[cls[i]],                        # shortage/normal/surplus (히트맵 3색)
+                "probs":{"shortage":round(p_short,3),"normal":round(p_norm,3),"surplus":round(p_surp,3)},
+                "shortage_pressure":round(p_short,2)}})           # 부족 확률 = 품절 위험 (기존 필드 호환)
 
     return {"meta":{"date":str(row['service_date'].date()),"round_id":row['round_id'],
                     "time":ROUND_TIME[row['round_id']],"mode":mode,"demo_mode":demo_mode,
-                    "note":"predicted_net_flow는 수급 경향값"},
+                    "note":"class는 다음 회차 수급 예측(부족/정상/과잉). 확률 기반 보조지표이며 최종 판단은 관제팀."},
             "priority_bikes":[{"bike_id":r['자전거번호'],"station_id":r['last_station'],
                                "idle_days":round(r['idle_days'],1),"broken_score":round(r['broken_score'],3)}
                               for _,r in btop.iterrows()],
@@ -168,7 +176,7 @@ def save_scenario(date, out_path=None):
         except ValueError:
             continue   # 윈도우 부족 등으로 없는 회차는 건너뜀
     out={"meta":{"scenario_date":date,"n_frames":len(frames),
-                 "note":"과거 재생 시연. predicted_net_flow는 수급 경향값."},
+                 "note":"과거 재생 시연. class는 수급 예측(확률 기반 보조지표)."},
          "frames":frames}
     if out_path is None:
         out_path=f'{OUT_DIR}/scenario_{date}.json'

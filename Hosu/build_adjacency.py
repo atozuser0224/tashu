@@ -1,71 +1,56 @@
 """
-타슈 STGNN - 인접행렬 A 구성
+방향 인접행렬 (실험) - 대칭화 제거 + 회차별 OD
 =================================================
-od_matrix.parquet -> [N, N] 대칭 정규화 인접행렬 (A3TGCN용)
+기존: (W+Wᵀ)/2 로 대칭화 -> 방향 소실
+변경: 비대칭 유지. A[i,j]=i→j 흐름. 모델에서 A와 Aᵀ 양방향 사용.
+     + 회차별로 OD 따로 (출근/퇴근 방향 경향 분리)
 
-파이프라인:
-  1) 가중치:  w(i,j) = log(1+trip_count) / (1+avg_km)   [혼합, 튜닝 없음]
-  2) 대칭화:  (W + W^T) / 2
-  3) self-loop: A = W_sym + I
-  4) 대칭 정규화: D^(-1/2) A D^(-1/2)
+정규화: 방향 그래프라 대칭정규화 대신 행 정규화(row-stochastic).
+  각 행 i의 합=1 -> "i에서 나가는 흐름의 분포"
 
 산출물 (processed/):
-  adjacency.npy         : [N, N] float32 정규화 인접행렬
-  node_index.csv        : 행렬 인덱스 <-> station_id 매핑 (순서 고정용, 필수)
+  adjacency_directed.npy       : [N,N] 통합 방향행렬 (회차 안 나눔 버전)
+  adjacency_by_round.npy       : [4,N,N] 회차별 방향행렬 (A/B/C/D)
 """
-import pandas as pd
-import numpy as np
-import os
+import pandas as pd, numpy as np, os
+OUT_DIR="processed"; ROUND_COLS=['A','B','C','D']
 
-OUT_DIR = "processed"
-
-def build_adjacency(od, station_ids):
-    """
-    od: DataFrame[src, dst, trip_count, avg_min, avg_km]
-    station_ids: 고정 순서의 대여소 ID 리스트 (station_master 순서)
-    returns: (A_norm [N,N] float32, node_index DataFrame)
-    """
-    N = len(station_ids)
-    idx = {sid: i for i, sid in enumerate(station_ids)}
-
-    # ── 1) 가중치 행렬 W (비대칭, 방향 유지) ──
-    W = np.zeros((N, N), dtype=np.float64)
-    for _, r in od.iterrows():
+def build_directed(od, station_ids):
+    """비대칭 방향 행렬 + 행 정규화 + self-loop."""
+    N=len(station_ids); idx={s:i for i,s in enumerate(station_ids)}
+    W=np.zeros((N,N),dtype=np.float64)
+    for _,r in od.iterrows():
         if r['src'] in idx and r['dst'] in idx:
-            i, j = idx[r['src']], idx[r['dst']]
-            if i == j:
-                continue  # 자기순환은 3단계에서 I로 따로 추가
-            W[i, j] = np.log1p(r['trip_count']) / (1.0 + r['avg_km'])
-
-    # ── 2) 대칭화 ──
-    W_sym = (W + W.T) / 2.0
-
-    # ── 3) self-loop ──
-    A = W_sym + np.eye(N)
-
-    # ── 4) 대칭 정규화 D^(-1/2) A D^(-1/2) ──
-    deg = A.sum(axis=1)
-    d_inv_sqrt = np.zeros_like(deg)
-    nz = deg > 0
-    d_inv_sqrt[nz] = 1.0 / np.sqrt(deg[nz])
-    D_inv_sqrt = np.diag(d_inv_sqrt)
-    A_norm = D_inv_sqrt @ A @ D_inv_sqrt
-
-    node_index = pd.DataFrame({'idx': range(N), 'station_id': station_ids})
-    return A_norm.astype(np.float32), node_index
+            i,j=idx[r['src']],idx[r['dst']]
+            if i!=j: W[i,j]=np.log1p(r['trip_count'])/(1.0+r.get('avg_km',0))
+    W=W+np.eye(N)  # self-loop
+    # 행 정규화 (나가는 흐름 분포)
+    rowsum=W.sum(1,keepdims=True); rowsum[rowsum==0]=1
+    A=(W/rowsum).astype(np.float32)
+    return A
 
 def main():
-    od = pd.read_parquet(f'{OUT_DIR}/od_matrix.parquet')
-    sm = pd.read_csv(f'{OUT_DIR}/station_master.csv')
-    # station_master 순서를 행렬 인덱스 순서로 고정 (dist_km 정렬 순서 유지)
-    station_ids = sm['station_id'].tolist()
+    station_ids=pd.read_csv(f'{OUT_DIR}/node_index.csv')['station_id'].tolist()
+    # 통합 OD (회차 무관)
+    od=pd.read_parquet(f'{OUT_DIR}/od_matrix.parquet')
+    A=build_directed(od,station_ids)
+    np.save(f'{OUT_DIR}/adjacency_directed.npy',A)
+    print(f"[방향행렬] 통합 {A.shape}, 행합≈1 확인: {A.sum(1)[:3].round(2)}")
+    print(f"[방향행렬] 비대칭 확인: A[0,1]={A[0,1]:.3f} vs A[1,0]={A[1,0]:.3f}")
 
-    A_norm, node_index = build_adjacency(od, station_ids)
+    # 회차별 OD (있으면)
+    try:
+        od_r=pd.read_parquet(f'{OUT_DIR}/od_matrix_by_round.parquet')
+        As=[]
+        for rc in ROUND_COLS:
+            sub=od_r[od_r['round_id']==rc]
+            As.append(build_directed(sub,station_ids) if len(sub) else np.eye(len(station_ids),dtype=np.float32))
+        Ar=np.stack(As)
+        np.save(f'{OUT_DIR}/adjacency_by_round.npy',Ar)
+        print(f"[방향행렬] 회차별 {Ar.shape} (A/B/C/D)")
+    except FileNotFoundError:
+        print("[방향행렬] od_matrix_by_round.parquet 없음 -> 통합만 생성")
+        print("           (회차별 OD는 preprocess에서 round_id별 집계 필요)")
 
-    np.save(f'{OUT_DIR}/adjacency.npy', A_norm)
-    node_index.to_csv(f'{OUT_DIR}/node_index.csv', index=False)
-    print(f"[저장] adjacency.npy shape={A_norm.shape}")
-    print(f"[저장] node_index.csv ({len(node_index)}개 대여소)")
-
-if __name__ == '__main__':
+if __name__=='__main__':
     main()
