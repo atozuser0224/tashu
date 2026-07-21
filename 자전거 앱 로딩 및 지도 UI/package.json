@@ -1,0 +1,41 @@
+{
+  "name": "ridego-driver",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "doctor": "expo-doctor",
+    "api-smoke": "tsx scripts/smoke-mobile-api.ts",
+    "test:web-fetch": "tsx scripts/test-web-fetch-binding.ts"
+  },
+  "dependencies": {
+    "@expo-google-fonts/archivo": "^0.4.2",
+    "@expo/metro-runtime": "~57.0.6",
+    "@expo/vector-icons": "^15.0.2",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "~57.0.7",
+    "expo-build-properties": "~57.0.6",
+    "expo-camera": "~57.0.3",
+    "expo-font": "~57.0.1",
+    "expo-linear-gradient": "~57.0.1",
+    "expo-location": "~57.0.5",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.0",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-svg": "15.15.4",
+    "react-native-web": "^0.21.2",
+    "react-native-webview": "13.16.1"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "tsx": "^4.23.1",
+    "typescript": "~6.0.3"
+  }
+}

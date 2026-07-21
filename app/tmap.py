@@ -5,7 +5,7 @@ import hashlib
 import json
 import os
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -17,6 +17,7 @@ from app.models import (
     NavigationInstruction,
     PlanResponse,
     RoadNavigation,
+    StopOutput,
 )
 from app.travel import TravelMetric, TravelNode, TravelTimeMatrix
 
@@ -82,25 +83,57 @@ class TmapClient:
 
         for offset in range(0, len(route.stops), MAX_STOPS_PER_REQUEST):
             stops = route.stops[offset : offset + MAX_STOPS_PER_REQUEST]
-            payload = self._make_payload(
-                route=route,
-                start=current_location,
-                start_at=current_start_at,
-                stops=stops,
-            )
-            response = await self._request(payload)
-            parsed = self._parse_response(response)
-            total_distance += parsed.total_distance_meters
-            total_duration += parsed.total_duration_seconds
-            total_fare += parsed.total_fare_won
-            self._append_coordinates(all_coordinates, parsed.coordinates)
-            all_instructions.extend(parsed.instructions)
+            try:
+                routed_segments = [
+                    (
+                        stops,
+                        await self._route_segment(
+                            route,
+                            current_location,
+                            current_start_at,
+                            stops,
+                        ),
+                    )
+                ]
+            except TmapApiError:
+                if len(stops) == 1:
+                    raise
 
-            current_location = stops[-1].location
-            service_seconds = round(service_minutes_per_stop * 60 * len(stops))
-            current_start_at += timedelta(
-                seconds=parsed.total_duration_seconds + service_seconds
-            )
+                # TMAP can reject a multi-waypoint request when a fixed route
+                # revisits the same station. Preserve the optimized stop order
+                # and retry that chunk one road leg at a time.
+                routed_segments = []
+                segment_start = current_location
+                segment_start_at = current_start_at
+                for stop in stops:
+                    segment_stops = [stop]
+                    parsed = await self._route_segment(
+                        route,
+                        segment_start,
+                        segment_start_at,
+                        segment_stops,
+                    )
+                    routed_segments.append((segment_stops, parsed))
+                    segment_start = stop.location
+                    service_seconds = round(service_minutes_per_stop * 60)
+                    segment_start_at += timedelta(
+                        seconds=parsed.total_duration_seconds + service_seconds
+                    )
+
+            for segment_stops, parsed in routed_segments:
+                total_distance += parsed.total_distance_meters
+                total_duration += parsed.total_duration_seconds
+                total_fare += parsed.total_fare_won
+                self._append_coordinates(all_coordinates, parsed.coordinates)
+                all_instructions.extend(parsed.instructions)
+
+                current_location = segment_stops[-1].location
+                service_seconds = round(
+                    service_minutes_per_stop * 60 * len(segment_stops)
+                )
+                current_start_at += timedelta(
+                    seconds=parsed.total_duration_seconds + service_seconds
+                )
 
         instructions = [
             instruction.model_copy(update={"sequence": index})
@@ -113,6 +146,21 @@ class TmapClient:
             coordinates=all_coordinates,
             instructions=instructions,
         )
+
+    async def _route_segment(
+        self,
+        route: DriverRouteOutput,
+        start: Location,
+        start_at: datetime,
+        stops: list[StopOutput],
+    ) -> RoadNavigation:
+        payload = self._make_payload(
+            route=route,
+            start=start,
+            start_at=start_at,
+            stops=stops,
+        )
+        return self._parse_response(await self._request(payload))
 
     async def travel_time_matrix(
         self,

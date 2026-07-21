@@ -101,6 +101,37 @@ async def test_tmap_preserves_assigned_stop_order_and_parses_road_geometry():
 
 
 @pytest.mark.asyncio
+async def test_tmap_retries_rejected_multi_stop_route_one_leg_at_a_time():
+    captured = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        captured.append(payload)
+        if "passList" in payload:
+            return httpx.Response(400, json={"error": "invalid pass list"})
+        return httpx.Response(200, json=tmap_response())
+
+    request = PlanRequest.model_validate(request_payload())
+    plan = create_plan(request, request.live_stations, "provided_tashu_snapshot")
+    route = next(item for item in plan.routes if item.stops)
+    client = TmapClient(
+        app_key="test-key",
+        transport=httpx.MockTransport(handler),
+    )
+
+    navigation = await client.route_driver(
+        route, request.options.service_minutes_per_stop
+    )
+
+    assert "passList" in captured[0]
+    assert len(captured) == len(route.stops) + 1
+    assert all("passList" not in payload for payload in captured[1:])
+    assert captured[1]["startX"] == str(route.start_location.lng)
+    assert captured[2]["startX"] == str(route.stops[0].location.lng)
+    assert navigation.total_distance_meters == 2345 * len(route.stops)
+
+
+@pytest.mark.asyncio
 async def test_enriches_frontend_map_with_tmap_route():
     def handler(_: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json=tmap_response())

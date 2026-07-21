@@ -7,6 +7,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Callable
+from urllib.parse import quote
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -72,6 +73,12 @@ from app.operations_models import (
 )
 from app.planner import create_plan
 from app.tashu import TashuApiError, TashuClient
+from app.test_scenario import (
+    CoreTestScenarioRequest,
+    TestTmapConfig,
+    build_test_plan_request,
+    create_sample_core_scenario,
+)
 from app.tmap import TmapApiError, TmapClient, enrich_plan_with_tmap
 from app.travel import TravelNode, driver_node_id, station_node_id
 
@@ -93,7 +100,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="타슈 다중 기사 재배치 API",
-    version="0.6.0",
+    version="0.8.0",
     description=(
         "core ST-GNN 예측과 타슈 실시간 재고를 결합해 기사별 동선을 배정하고, "
         "기사 미션 수행과 포인트 리워드까지 관리합니다."
@@ -104,7 +111,11 @@ app = FastAPI(
 origins = [
     origin.strip()
     for origin in os.getenv(
-        "FRONTEND_ORIGINS", "http://localhost:3000,http://localhost:5173"
+        "FRONTEND_ORIGINS",
+        (
+            "http://localhost:3000,http://localhost:5173,"
+            "http://localhost:8081,http://127.0.0.1:8081"
+        ),
     ).split(",")
     if origin.strip()
 ]
@@ -214,6 +225,52 @@ async def create_test_plan() -> PlanResponse:
     return await plan_rebalancing(PlanRequest.model_validate(payload), principal)
 
 
+@app.get(
+    "/api/v1/test/core-scenarios/sample",
+    response_model=CoreTestScenarioRequest,
+    tags=["test-mode"],
+)
+async def get_sample_core_scenario(_: AdminPrincipal) -> CoreTestScenarioRequest:
+    _require_test_mode()
+    return create_sample_core_scenario()
+
+
+@app.get(
+    "/api/v1/test/tmap/config",
+    response_model=TestTmapConfig,
+    tags=["test-mode"],
+)
+async def get_test_tmap_config(_: AdminPrincipal) -> TestTmapConfig:
+    _require_test_mode()
+    app_key = app.state.tmap_client.app_key
+    return TestTmapConfig(
+        configured=bool(app_key),
+        sdk_url=(
+            "https://apis.openapi.sk.com/tmap/jsv2?version=1&appKey="
+            + quote(app_key, safe="")
+            if app_key
+            else None
+        ),
+    )
+
+
+@app.post(
+    "/api/v1/test/core-scenarios/plan",
+    response_model=PlanResponse,
+    tags=["test-mode"],
+)
+async def plan_test_core_scenario(
+    request: CoreTestScenarioRequest,
+    principal: AdminPrincipal,
+    x_test_tmap_key: Annotated[
+        str | None, Header(alias="X-Test-Tmap-Key")
+    ] = None,
+) -> PlanResponse:
+    _require_test_mode()
+    planning_request = build_test_plan_request(request)
+    return await plan_rebalancing(planning_request, principal, x_test_tmap_key)
+
+
 @app.post(
     "/api/v1/test/stations/{station_id}/qr",
     response_model=TestStationQrResponse,
@@ -314,7 +371,11 @@ async def list_tashu_stations(_: AnyPrincipal) -> TashuStationListResponse:
     tags=["rebalancing"],
 )
 async def plan_rebalancing(
-    request: PlanRequest, principal: OperatorPrincipal
+    request: PlanRequest,
+    principal: OperatorPrincipal,
+    x_test_tmap_key: Annotated[
+        str | None, Header(alias="X-Test-Tmap-Key")
+    ] = None,
 ) -> PlanResponse:
     warnings: list[str] = []
     if request.live_stations is not None:
@@ -334,6 +395,8 @@ async def plan_rebalancing(
         source = "prediction_only"
 
     tmap_client: TmapClient = app.state.tmap_client
+    if app.state.test_mode and x_test_tmap_key:
+        tmap_client = TmapClient(app_key=x_test_tmap_key)
     travel_matrix = None
     if request.options.use_tmap_planning_matrix:
         if tmap_client.configured:

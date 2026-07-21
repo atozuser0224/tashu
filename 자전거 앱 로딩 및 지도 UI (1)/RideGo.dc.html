@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/modernist-9069c699-626a-4f88-ae10-77ce3cba2453/styles.css">
+  <script src="_ds/modernist-9069c699-626a-4f88-ae10-77ce3cba2453/_ds_bundle.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box}
+    .rg-w{animation:rg-spin .5s linear infinite}
+    @keyframes rg-spin{to{transform:rotate(360deg)}}
+    @keyframes rg-ride{0%{transform:translateX(-130px)}100%{transform:translateX(340px)}}
+    @keyframes rg-cloud{0%,100%{transform:translateX(0)}50%{transform:translateX(8px)}}
+    @keyframes rg-fadeup{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+    @keyframes rg-wind{0%{opacity:0;transform:translateX(10px)}35%{opacity:.9}100%{opacity:0;transform:translateX(-18px)}}
+    @keyframes rg-coin{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-9px) rotate(4deg)}}
+    @keyframes rg-slide{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+    @keyframes rg-pop{0%{opacity:0;transform:translateY(46px) scale(.92)}100%{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes rg-scan{0%{transform:translateY(0)}100%{transform:translateY(212px)}}
+    @keyframes rg-flash{0%{opacity:0}14%{opacity:.62}100%{opacity:0}}
+    @keyframes rg-bounce{0%,100%{transform:translateY(0)}28%{transform:translateY(-16px) scale(1.04,.96)}55%{transform:translateY(0) scale(.98,1.03)}72%{transform:translateY(-7px)}}
+  </style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#d3cec8;font-family:Archivo,system-ui,sans-serif;padding:26px">
+  <div style="position:relative;width:390px;height:844px;border-radius:46px;overflow:hidden;background:#000;box-shadow:0 34px 90px rgba(0,0,0,.38);border:11px solid #0c0c0c">
+
+    <div style="position:absolute;top:0;left:0;right:0;height:54px;z-index:80;display:flex;align-items:center;justify-content:space-between;padding:14px 30px 0;pointer-events:none;color:#201e1d">
+      <span style="font-size:17px;font-weight:700;letter-spacing:-.02em">11:32</span>
+      <span style="display:flex;align-items:center;gap:7px">
+        <svg width="19" height="13" viewBox="0 0 19 13" fill="currentColor"><rect x="0" y="9" width="3" height="4" rx="1"/><rect x="5" y="6" width="3" height="7" rx="1"/><rect x="10" y="3" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="13" rx="1" opacity=".35"/></svg>
+        <span style="font-size:13px;font-weight:700;letter-spacing:-.01em">LTE</span>
+        <svg width="27" height="14" viewBox="0 0 27 14" fill="none"><rect x="1" y="1" width="22" height="12" rx="3" stroke="currentColor" stroke-opacity=".45" stroke-width="1.4"/><rect x="3" y="3" width="16" height="8" rx="1.5" fill="currentColor"/><rect x="24.5" y="4.5" width="2" height="5" rx="1" fill="currentColor" fill-opacity=".45"/></svg>
+      </span>
+    </div>
+
+    <sc-if value="{{ isLoading }}" hint-placeholder-val="{{ true }}">
+    <div onClick="{{ goLogin }}" style="position:absolute;inset:0;background:linear-gradient(180deg,#FCA632 0%,#F7941D 55%,#EC7C15 74%,#25A35E 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;overflow:hidden">
+
+      <div style="font-size:42px;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1;text-shadow:0 3px 14px rgba(150,60,0,.28);margin-top:-66px;animation:rg-fadeup .6s ease both">{{ appName }}</div>
+
+      <svg width="300" height="300" viewBox="0 0 300 300" style="margin-top:62px;filter:drop-shadow(0 14px 30px rgba(140,55,0,.24))">
+        <defs><clipPath id="rg-circ"><circle cx="150" cy="150" r="140"/></clipPath></defs>
+        <circle cx="150" cy="150" r="140" fill="#ffffff"/>
+        <g clip-path="url(#rg-circ)">
+          <g style="animation:rg-cloud 7s ease-in-out infinite"><ellipse cx="96" cy="78" rx="26" ry="12" fill="#FBE3C4"/><ellipse cx="120" cy="72" rx="18" ry="12" fill="#FBE3C4"/></g>
+          <g style="animation:rg-cloud 9s ease-in-out infinite;animation-direction:reverse"><ellipse cx="212" cy="104" rx="20" ry="9" fill="#FCEAD5"/><ellipse cx="230" cy="100" rx="14" ry="9" fill="#FCEAD5"/></g>
+
+          <path d="M110 78 L128 200 L92 200 Z" fill="#F4A548"/>
+          <path d="M110 78 L110 200 L92 200 Z" fill="#E8892A"/>
+          <rect x="78" y="132" width="70" height="24" rx="12" fill="#FBC178"/>
+          <g stroke="#F3982F" stroke-width="4"><line x1="92" y1="138" x2="92" y2="150"/><line x1="104" y1="138" x2="104" y2="150"/><line x1="116" y1="138" x2="116" y2="150"/><line x1="128" y1="138" x2="128" y2="150"/><line x1="140" y1="138" x2="140" y2="150"/></g>
+
+          <path d="M150 196 Q200 118 250 196" fill="none" stroke="#E8892A" stroke-width="9"/>
+          <path d="M188 196 Q244 112 298 196" fill="none" stroke="#C96E12" stroke-width="9"/>
+          <g stroke="#F4A548" stroke-width="2.4" opacity=".9"><line x1="168" y1="176" x2="168" y2="196"/><line x1="188" y1="158" x2="188" y2="196"/><line x1="212" y1="150" x2="212" y2="196"/><line x1="236" y1="158" x2="236" y2="196"/></g>
+          <rect x="150" y="192" width="150" height="6" fill="#D97C1C"/>
+          <rect x="164" y="196" width="10" height="16" fill="#CE7414"/><rect x="246" y="196" width="10" height="16" fill="#CE7414"/>
+
+          <ellipse cx="150" cy="214" rx="128" ry="30" fill="#EF9A38"/>
+          <path d="M22 210 Q150 190 278 210" fill="none" stroke="#F6B268" stroke-width="6"/>
+
+          <g><rect x="52" y="186" width="5" height="26" fill="#C96E12"/><path d="M54 158 L40 192 L69 192 Z" fill="#EC8A24"/><path d="M54 168 L44 192 L65 192 Z" fill="#D97C1C"/></g>
+          <g><rect x="252" y="184" width="5" height="28" fill="#C96E12"/><path d="M254 154 L238 192 L271 192 Z" fill="#EC8A24"/><path d="M254 166 L244 192 L266 192 Z" fill="#D97C1C"/></g>
+
+          <g class="rg-ride" style="animation:rg-ride 2.4s linear forwards">
+            <g>
+              <path d="M62 196 q-24 -2 -44 1" fill="none" stroke="#E7A24A" stroke-width="2.6" stroke-linecap="round" style="animation:rg-wind 1s ease-in-out infinite"/>
+              <path d="M74 186 q-18 -3 -34 -1" fill="none" stroke="#F0B972" stroke-width="2.2" stroke-linecap="round" style="animation:rg-wind 1s ease-in-out infinite .15s"/>
+              <path d="M66 210 q-28 0 -50 4" fill="none" stroke="#F0B972" stroke-width="2.6" stroke-linecap="round" style="animation:rg-wind 1s ease-in-out infinite .3s"/>
+              <path d="M62 224 q-22 2 -40 7" fill="none" stroke="#E7A24A" stroke-width="2.4" stroke-linecap="round" style="animation:rg-wind 1s ease-in-out infinite .45s"/>
+            </g>
+            <g transform="translate(96,190)">
+              <g class="rg-w" style="transform-box:fill-box;transform-origin:center"><circle cx="9" cy="24" r="8.5" fill="none" stroke="#1c1c1c" stroke-width="2.6"/><line x1="9" y1="15.5" x2="9" y2="32.5" stroke="#3a3a3a" stroke-width="1.3"/><line x1="0.5" y1="24" x2="17.5" y2="24" stroke="#3a3a3a" stroke-width="1.3"/></g>
+              <g class="rg-w" style="transform-box:fill-box;transform-origin:center"><circle cx="35" cy="24" r="8.5" fill="none" stroke="#1c1c1c" stroke-width="2.6"/><line x1="35" y1="15.5" x2="35" y2="32.5" stroke="#3a3a3a" stroke-width="1.3"/><line x1="26.5" y1="24" x2="43.5" y2="24" stroke="#3a3a3a" stroke-width="1.3"/></g>
+              <path d="M9 24 L22 24 L16 10 M22 24 L28 10 M16 10 L28 10 M28 10 L35 24" fill="none" stroke="#1c1c1c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <ellipse cx="15" cy="9" rx="4" ry="1.4" fill="#111111"/>
+              <rect x="28" y="7" width="7" height="5" rx="1" fill="none" stroke="#333333" stroke-width="1.6"/>
+              <path d="M19 9 L24 -2" stroke="#262626" stroke-width="4.2" stroke-linecap="round"/>
+              <path d="M23 1 L31 9" stroke="#262626" stroke-width="3" stroke-linecap="round"/>
+              <path d="M20 8 L22 24" stroke="#111111" stroke-width="3" stroke-linecap="round"/>
+              <path d="M20 -3 A4.2 4.2 0 0 1 29 -3 L27 1 L22 1 Z" fill="#1c1c1c"/>
+              <circle cx="24.5" cy="-4.5" r="3.8" fill="#4a4a4a"/>
+            </g>
+            <g transform="translate(146,197) scale(.92)">
+              <g class="rg-w" style="transform-box:fill-box;transform-origin:center"><circle cx="9" cy="24" r="8.5" fill="none" stroke="#767676" stroke-width="2.6"/><line x1="9" y1="15.5" x2="9" y2="32.5" stroke="#9a9a9a" stroke-width="1.3"/><line x1="0.5" y1="24" x2="17.5" y2="24" stroke="#9a9a9a" stroke-width="1.3"/></g>
+              <g class="rg-w" style="transform-box:fill-box;transform-origin:center"><circle cx="35" cy="24" r="8.5" fill="none" stroke="#767676" stroke-width="2.6"/><line x1="35" y1="15.5" x2="35" y2="32.5" stroke="#9a9a9a" stroke-width="1.3"/><line x1="26.5" y1="24" x2="43.5" y2="24" stroke="#9a9a9a" stroke-width="1.3"/></g>
+              <path d="M9 24 L22 24 L16 10 M22 24 L28 10 M16 10 L28 10 M28 10 L35 24" fill="none" stroke="#767676" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <ellipse cx="15" cy="9" rx="4" ry="1.4" fill="#6b6b6b"/>
+              <rect x="28" y="7" width="7" height="5" rx="1" fill="none" stroke="#8a8a8a" stroke-width="1.6"/>
+              <path d="M19 9 L24 -2" stroke="#808080" stroke-width="4.2" stroke-linecap="round"/>
+              <path d="M23 1 L31 9" stroke="#808080" stroke-width="3" stroke-linecap="round"/>
+              <path d="M20 8 L22 24" stroke="#6b6b6b" stroke-width="3" stroke-linecap="round"/>
+              <path d="M20 -3 A4.2 4.2 0 0 1 29 -3 L27 1 L22 1 Z" fill="#767676"/>
+              <circle cx="24.5" cy="-4.5" r="3.8" fill="#a5a5a5"/>
+            </g>
+          </g>
+        </g>
+      </svg>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg,#FCA632 0%,#F7941D 55%,#EC7C15 74%,#25A35E 100%);display:flex;flex-direction:column;animation:rg-fadeup .45s ease both">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding-bottom:20px">
+        <svg width="170" height="165" viewBox="0 0 170 165" fill="none" style="filter:drop-shadow(0 6px 16px rgba(120,50,0,.25));animation:rg-bounce 1.15s ease-in-out infinite;transform-origin:50% 90%">
+          <path d="M22 54 q7 -8 14 0 q7 8 14 0" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M138 40 L138 58 M129 49 L147 49" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+          <g fill="#fff">
+            <circle cx="68" cy="72" r="25"/>
+            <circle cx="100" cy="68" r="23"/>
+            <circle cx="116" cy="86" r="21"/>
+            <circle cx="56" cy="90" r="21"/>
+            <circle cx="85" cy="93" r="27"/>
+            <circle cx="108" cy="101" r="18"/>
+          </g>
+          <path d="M46 92 q-11 2 -15 13 M124 92 q11 2 15 13" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+          <ellipse cx="76" cy="84" rx="5.2" ry="7" fill="#2a1c08"/>
+          <ellipse cx="98" cy="84" rx="5.2" ry="7" fill="#2a1c08"/>
+          <circle cx="78" cy="81" r="1.6" fill="#fff"/>
+          <circle cx="100" cy="81" r="1.6" fill="#fff"/>
+          <path d="M82 96 q5 5 11 0" stroke="#2a1c08" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+          <path d="M76 116 L82 126 M96 116 L90 126" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+          <circle cx="86" cy="138" r="18" fill="none" stroke="#fff" stroke-width="3.5"/>
+          <circle cx="86" cy="138" r="2.6" fill="#fff"/>
+          <path d="M86 138 L86 121M86 138 L102 131M86 138 L99 151M86 138 L73 151M86 138 L70 131" stroke="#fff" stroke-width="1.7"/>
+        </svg>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:7px">
+          <div style="font-size:40px;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1;text-shadow:0 3px 14px rgba(150,60,0,.28)">{{ appName }}</div>
+          <div style="font-size:13px;font-weight:600;color:#fff;opacity:.88;letter-spacing:-.01em">타슈 재배치 파트너 서비스</div>
+        </div>
+      </div>
+      <div style="margin:0 12px 54px;padding:0 12px">
+        <button onClick="{{ googleLogin }}" style="width:100%;display:flex;align-items:center;justify-content:center;gap:11px;background:#fff;border:1.5px solid #e2e0dd;border-radius:14px;padding:15px;font-family:inherit;font-size:15px;font-weight:700;color:#201e1d;cursor:pointer" style-hover="background:#f7f6f5">
+          <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.28-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Google 계정으로 로그인
+        </button>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isInfo }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#f3f2f2;display:flex;flex-direction:column;animation:rg-fadeup .45s ease both">
+      <div style="padding:74px 24px 18px">
+        <div style="font-size:26px;font-weight:800;color:#201e1d;letter-spacing:-.03em;line-height:1.1">정보 입력</div>
+        <div style="font-size:13px;font-weight:500;color:#9b9797;margin-top:7px">서비스 이용을 위해 인적사항을 입력해주세요</div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:6px 24px 20px;display:flex;flex-direction:column;gap:18px">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#605d5d;margin-bottom:8px">이름</div>
+          <input value="{{ name }}" onInput="{{ setName }}" placeholder="홍길동" style="width:100%;padding:14px 16px;border:1.5px solid #e2e0dd;border-radius:12px;font-family:inherit;font-size:15px;color:#201e1d;background:#fff;outline:none" style-focus="border-color:#F7941D"/>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#605d5d;margin-bottom:8px">생년월일</div>
+          <input value="{{ birth }}" onInput="{{ setBirth }}" type="date" style="width:100%;padding:14px 16px;border:1.5px solid #e2e0dd;border-radius:12px;font-family:inherit;font-size:15px;color:#201e1d;background:#fff;outline:none" style-focus="border-color:#F7941D"/>
+          <sc-if value="{{ ageError }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:8px;font-size:12.5px;font-weight:600;color:#d0442a">만 24세 미만은 이용할 수 없습니다</div>
+          </sc-if>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#605d5d;margin-bottom:8px">성별</div>
+          <div style="display:flex;gap:10px">
+            <button onClick="{{ setMale }}" style="{{ maleStyle }}">남성</button>
+            <button onClick="{{ setFemale }}" style="{{ femaleStyle }}">여성</button>
+          </div>
+        </div>
+        <div style="position:relative">
+          <div style="font-size:12px;font-weight:700;color:#605d5d;margin-bottom:8px">거주지</div>
+          <input value="{{ residence }}" onInput="{{ setResidence }}" placeholder="도로명·건물명으로 검색" style="width:100%;padding:14px 16px;border:1.5px solid #e2e0dd;border-radius:12px;font-family:inherit;font-size:15px;color:#201e1d;background:#fff;outline:none" style-focus="border-color:#F7941D"/>
+          <sc-if value="{{ hasSuggest }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:8px;border:1.5px solid #eee;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 8px 20px rgba(0,0,0,.08)">
+            <sc-for list="{{ suggestions }}" as="s" hint-placeholder-count="3">
+              <button onClick="{{ s.pick }}" style="width:100%;display:flex;align-items:center;gap:11px;padding:13px 14px;border:none;border-bottom:1px solid #f2f0ed;background:#fff;font-family:inherit;font-size:14px;color:#201e1d;text-align:left;cursor:pointer" style-hover="background:#faf8f6">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F7941D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+                <span>{{ s.text }}</span>
+              </button>
+            </sc-for>
+          </div>
+          </sc-if>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#605d5d;margin-bottom:8px">전화번호</div>
+          <input value="{{ phone }}" onInput="{{ setPhone }}" type="tel" placeholder="010-1234-5678" style="width:100%;padding:14px 16px;border:1.5px solid #e2e0dd;border-radius:12px;font-family:inherit;font-size:15px;color:#201e1d;background:#fff;outline:none" style-focus="border-color:#F7941D"/>
+        </div>
+      </div>
+      <div style="padding:14px 24px calc(24px + env(safe-area-inset-bottom));background:#f3f2f2;border-top:1px solid #e6e4e1">
+        <button onClick="{{ submitInfo }}" style="width:100%;padding:16px;border:none;border-radius:14px;background:#F7941D;color:#fff;font-family:inherit;font-size:16px;font-weight:800;letter-spacing:-.01em;cursor:pointer" style-hover="background:#D06A0E">완료</button>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isMap }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#e8e8e8;animation:rg-fadeup .5s ease both;overflow:hidden">
+      <iframe src="daejeon-map.html?phase={{ mapPhase }}&st={{ stationIdx }}" title="map" style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe>
+
+      <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;top:0;left:0;right:0;height:200px;background:linear-gradient(#e8e8e8f2,transparent);pointer-events:none"></div>
+      </sc-if>
+
+      <button onClick="{{ openDrawer }}" style="position:absolute;top:58px;left:22px;z-index:40;width:46px;height:46px;border-radius:14px;background:#fff;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.14)" style-hover="background:#f4f4f4">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#201e1d" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+
+      <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;top:120px;left:24px;pointer-events:none">
+        <div style="font-size:27px;font-weight:800;color:#201e1d;letter-spacing:-.03em;line-height:1">{{ city }}</div>
+        <div style="font-size:12px;font-weight:600;color:#7d7979;margin-top:4px;letter-spacing:-.01em">{{ address }}</div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;right:22px;bottom:212px;display:flex;flex-direction:column;gap:10px">
+        <button onClick="{{ research }}" style="width:44px;height:44px;border-radius:14px;background:#fff;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.16)" style-hover="background:#f4f4f4">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#201e1d" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+        </button>
+        <button onClick="{{ recenter }}" style="width:44px;height:44px;border-radius:14px;background:#fff;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.16)" style-hover="background:#f4f4f4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="6.4"/><line x1="12" y1="1.6" x2="12" y2="5.6"/><line x1="12" y1="18.4" x2="12" y2="22.4"/><line x1="1.6" y1="12" x2="5.6" y2="12"/><line x1="18.4" y1="12" x2="22.4" y2="12"/><circle cx="12" cy="12" r="1" fill="{{ accent }}" stroke="none"/></svg>
+        </button>
+      </div>
+
+      <sc-if value="{{ isCollect }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;left:16px;right:16px;bottom:34px;background:#fff;border-radius:22px;padding:17px;box-shadow:0 14px 40px rgba(0,0,0,.2);animation:rg-pop .5s cubic-bezier(.18,.7,.28,1.32) .6s both">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="flex:none;width:60px;height:60px;border-radius:16px;background:#DCF3E6;display:flex;align-items:center;justify-content:center">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#1FA35C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8 12 4l9 4-9 4z"/><path d="M3 8v8l9 4 9-4V8"/><path d="M12 12v8"/></svg>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span style="font-size:10px;font-weight:800;letter-spacing:.04em;color:#178B4C;background:#DCF3E6;padding:3px 8px;border-radius:6px">회수 지점</span>
+            </div>
+            <div style="font-size:18px;font-weight:800;color:#201e1d;letter-spacing:-.02em">어은동 회수 지점</div>
+          </div>
+          <button onClick="{{ scanCollect }}" style="flex:none;width:46px;height:46px;border-radius:50%;background:#1FA35C;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:#178B4C">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M20 14v.01M14 20h.01M17 20h4v.01"/></svg>
+          </button>
+        </div>
+        <div style="display:flex;gap:0;margin-top:15px;border-top:1.5px solid #c4bfb8;padding-top:14px">
+          <div style="flex:1"><div style="font-size:11px;font-weight:600;color:#9b9797;margin-bottom:2px">거리</div><div style="font-size:16px;font-weight:800;color:#201e1d">0.5 km</div></div>
+          <div style="flex:1;border-left:1.5px solid #c4bfb8;padding-left:16px"><div style="font-size:11px;font-weight:600;color:#9b9797;margin-bottom:2px">예상 시간</div><div style="font-size:16px;font-weight:800;color:#201e1d">3 분</div></div>
+          <div style="flex:1;border-left:1.5px solid #c4bfb8;padding-left:16px"><div style="font-size:11px;font-weight:600;color:#9b9797;margin-bottom:2px">회수 완료</div><div style="font-size:16px;font-weight:800;color:#1FA35C">{{ collected }} / 8</div></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isDeploy }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;left:16px;right:16px;bottom:34px;background:#fff;border-radius:22px;padding:17px;box-shadow:0 14px 40px rgba(0,0,0,.2);animation:rg-pop .5s cubic-bezier(.18,.7,.28,1.32) .6s both">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="flex:none;width:60px;height:60px;border-radius:16px;background:#FDECD6;display:flex;align-items:center;justify-content:center">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#EC7C15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="3.2"/><circle cx="18" cy="17" r="3.2"/><path d="M6 17 10 8h5l3 9M10 8l2 5h6"/></svg>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span style="font-size:10px;font-weight:800;letter-spacing:.04em;color:#EC7C15;background:#FDECD6;padding:3px 8px;border-radius:6px">재배치 필요</span>
+            </div>
+            <div style="font-size:18px;font-weight:800;color:#201e1d;letter-spacing:-.02em">{{ stationName }}</div>
+          </div>
+          <button onClick="{{ scanDeploy }}" style="flex:none;width:46px;height:46px;border-radius:50%;background:#F7941D;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:#D06A0E">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M20 14v.01M14 20h.01M17 20h4v.01"/></svg>
+          </button>
+        </div>
+        <div style="display:flex;gap:0;margin-top:15px;border-top:1.5px solid #c4bfb8;padding-top:14px">
+          <div style="flex:1"><div style="font-size:11px;font-weight:600;color:#9b9797;margin-bottom:2px">거리</div><div style="font-size:16px;font-weight:800;color:#201e1d">0.8 km</div></div>
+          <div style="flex:1;border-left:1.5px solid #c4bfb8;padding-left:16px"><div style="font-size:11px;font-weight:600;color:#9b9797;margin-bottom:2px">재배치</div><div style="font-size:16px;font-weight:800;color:#201e1d">{{ deployed }} / 8</div></div>
+          <div style="flex:1;border-left:1.5px solid #c4bfb8;padding-left:16px"><div style="font-size:11px;font-weight:600;color:#9b9797;margin-bottom:2px">잔여 가능</div><div style="font-size:16px;font-weight:800;color:#F7941D">{{ stationRemain }}대</div></div>
+        </div>
+      </div>
+      </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ noStationOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:97;background:rgba(25,18,6,.55);display:flex;align-items:center;justify-content:center;padding:30px;animation:rg-fadeup .25s ease both">
+        <div style="background:#fff;border-radius:28px;padding:34px 26px 24px;width:100%;max-width:310px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.35)">
+          <div style="display:flex;justify-content:center;margin-bottom:20px">
+            <div style="width:88px;height:88px;border-radius:50%;background:#FBECE9;display:flex;align-items:center;justify-content:center">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#d0442a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11z"/><path d="M9.5 8.5l5 5M14.5 8.5l-5 5"/></svg>
+            </div>
+          </div>
+          <div style="font-size:20px;font-weight:800;color:#201e1d;letter-spacing:-.02em">재배치 가능한 대여소가 없습니다</div>
+          <div style="font-size:13px;font-weight:500;color:#9b9797;margin-top:8px;line-height:1.5">근처 대여소가 모두 가득 찼어요.<br/>잠시 후 다시 시도하거나 고객센터로 문의해 주세요.</div>
+          <button onClick="{{ closeNoStation }}" style="margin-top:24px;width:100%;padding:16px;border:none;border-radius:14px;background:#201e1d;color:#fff;font-family:inherit;font-size:16px;font-weight:800;cursor:pointer" style-hover="background:#000">확인</button>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ rewardOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:95;background:rgba(25,18,6,.55);display:flex;align-items:center;justify-content:center;padding:30px;animation:rg-fadeup .25s ease both">
+        <div style="background:#fff;border-radius:28px;padding:36px 26px 24px;width:100%;max-width:310px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.35)">
+          <div style="display:flex;justify-content:center;margin-bottom:22px">
+            <svg width="96" height="96" viewBox="0 0 96 96" style="animation:rg-coin 1.5s ease-in-out infinite;filter:drop-shadow(0 10px 16px rgba(232,149,27,.4))">
+              <circle cx="48" cy="48" r="42" fill="#E08A16"/>
+              <circle cx="48" cy="48" r="42" fill="none" stroke="#C87608" stroke-width="3"/>
+              <circle cx="48" cy="48" r="33" fill="#FBB733"/>
+              <circle cx="48" cy="48" r="33" fill="none" stroke="#FFD277" stroke-width="2.5"/>
+              <path d="M40 34 L48 52 L56 34 M48 52 L48 64 M41 57 H55 M41 62 H55" fill="none" stroke="#B96A06" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <ellipse cx="38" cy="34" rx="7" ry="4" fill="#FFE0A0" opacity=".7"/>
+            </svg>
+          </div>
+          <div style="font-size:20px;font-weight:800;color:#201e1d;letter-spacing:-.02em">리워드가 지급되었습니다</div>
+          <div style="font-size:13px;font-weight:500;color:#9b9797;margin-top:8px">재배치를 완료해 주셔서 감사합니다</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:9px;margin:22px 0 24px;background:#FDF0DC;border-radius:16px;padding:13px 20px">
+            <svg width="26" height="26" viewBox="0 0 96 96"><circle cx="48" cy="48" r="42" fill="#E08A16"/><circle cx="48" cy="48" r="33" fill="#FBB733"/><path d="M40 34 L48 52 L56 34 M48 52 L48 64 M41 57 H55 M41 62 H55" fill="none" stroke="#B96A06" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span style="font-size:25px;font-weight:800;color:#EC7C15;letter-spacing:-.02em">+ 500 P</span>
+          </div>
+          <button onClick="{{ hideReward }}" style="width:100%;padding:16px;border:none;border-radius:14px;background:#F7941D;color:#fff;font-family:inherit;font-size:16px;font-weight:800;cursor:pointer" style-hover="background:#D06A0E">확인</button>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isRewards }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:30;background:#f3f2f2;overflow-y:auto;animation:rg-fadeup .3s ease both">
+        <div style="padding:120px 22px 30px">
+          <div style="background:{{ rewardColor }};border-radius:24px;padding:24px;color:#fff;box-shadow:0 12px 30px rgba(0,0,0,.18)">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-size:14px;font-weight:700;opacity:.92">보유 리워드</div>
+              <div style="font-size:12px;font-weight:600;opacity:.85">{{ today }}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:22px">
+              <svg width="40" height="40" viewBox="0 0 96 96"><circle cx="48" cy="48" r="42" fill="#fff" opacity=".28"/><circle cx="48" cy="48" r="32" fill="#fff"/><path d="M40 34 L48 52 L56 34 M48 52 L48 64 M41 57 H55 M41 62 H55" fill="none" stroke="{{ rewardColor }}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span style="font-size:44px;font-weight:800;letter-spacing:-.02em;line-height:1">2,500 P</span>
+            </div>
+            <div style="font-size:12px;font-weight:500;opacity:.8;margin-top:18px">이번 달 적립 3,700 P · 누적 재배치 21건</div>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:#605d5d;margin:26px 0 12px">적립 내역</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ rewardHistory }}" as="h" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:14px;background:#fff;border-radius:16px;padding:15px 16px">
+                <div style="flex:none;width:42px;height:42px;border-radius:12px;background:{{ rewardSoft }};display:flex;align-items:center;justify-content:center">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ rewardColor }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9.5 12 15 15 9.5M12 15v3M10 16.5h4M10 18h4"/></svg>
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:14px;font-weight:700;color:#201e1d">{{ h.title }}</div>
+                  <div style="font-size:12px;color:#9b9797;margin-top:2px">{{ h.date }}</div>
+                </div>
+                <div style="font-size:16px;font-weight:800;color:{{ rewardColor }}">{{ h.pts }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ historyExpandable }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ toggleHistory }}" style="width:100%;margin-top:14px;padding:14px;border:1.5px solid #e2e0dd;border-radius:14px;background:#fff;font-family:inherit;font-size:14px;font-weight:700;color:#605d5d;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px" style-hover="background:#faf8f6">
+            {{ historyToggleText }}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#605d5d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transform:{{ chevronRot }};transition:transform .2s"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          </sc-if>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:30;background:#f3f2f2;overflow-y:auto;animation:rg-fadeup .3s ease both">
+        <div style="padding:120px 24px 40px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:6px;height:24px;border-radius:3px;background:{{ accent }}"></span>
+            <div style="font-size:26px;font-weight:800;color:#201e1d;letter-spacing:-.03em">환경설정</div>
+          </div>
+
+          <div style="margin-top:24px;font-size:15px;font-weight:800;color:#201e1d">내 정보</div>
+          <div style="margin-top:10px;background:#fff;border-radius:18px;padding:6px 18px">
+            <div style="display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid #f2f0ed"><span style="width:74px;flex:none;font-size:13px;font-weight:600;color:#9b9797">이름</span><span style="font-size:14.5px;font-weight:600;color:#201e1d">{{ profName }}</span></div>
+            <div style="display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid #f2f0ed"><span style="width:74px;flex:none;font-size:13px;font-weight:600;color:#9b9797">생년월일</span><span style="font-size:14.5px;font-weight:600;color:#201e1d">{{ profBirth }}</span></div>
+            <div style="display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid #f2f0ed"><span style="width:74px;flex:none;font-size:13px;font-weight:600;color:#9b9797">성별</span><span style="font-size:14.5px;font-weight:600;color:#201e1d">{{ profGender }}</span></div>
+            <div style="display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid #f2f0ed"><span style="width:74px;flex:none;font-size:13px;font-weight:600;color:#9b9797">전화번호</span><span style="font-size:14.5px;font-weight:600;color:#201e1d">{{ profPhone }}</span></div>
+            <div style="display:flex;align-items:center;gap:14px;padding:13px 0"><span style="width:74px;flex:none;font-size:13px;font-weight:600;color:#9b9797">이메일</span><span style="font-size:14.5px;font-weight:600;color:#201e1d">{{ email }}</span></div>
+          </div>
+
+          <div style="margin-top:24px;font-size:15px;font-weight:800;color:#201e1d">알림 설정</div>
+          <div style="margin-top:10px;background:#fff;border-radius:18px;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #f0eeeb"><span style="font-size:15px;font-weight:600;color:#201e1d">푸시 알림</span><div style="width:46px;height:27px;border-radius:14px;background:{{ accent }};position:relative"><div style="position:absolute;top:3px;right:3px;width:21px;height:21px;border-radius:50%;background:#fff"></div></div></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #f0eeeb"><span style="font-size:15px;font-weight:600;color:#201e1d">위치 서비스</span><div style="width:46px;height:27px;border-radius:14px;background:{{ accent }};position:relative"><div style="position:absolute;top:3px;right:3px;width:21px;height:21px;border-radius:50%;background:#fff"></div></div></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px"><span style="font-size:15px;font-weight:600;color:#201e1d">재배치 추천 알림</span><div style="width:46px;height:27px;border-radius:14px;background:#d7d3d3;position:relative"><div style="position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff"></div></div></div>
+          </div>
+
+          <div style="margin-top:24px;font-size:15px;font-weight:800;color:#201e1d">기타</div>
+          <div style="margin-top:10px;background:#fff;border-radius:18px;overflow:hidden">
+            <button onClick="{{ goEditProfile }}" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:16px;border:none;border-bottom:1px solid #f0eeeb;background:#fff;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#faf8f6"><span style="font-size:15px;font-weight:600;color:#201e1d">정보 수정하기</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c3bfbc" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 15 12 9 18"/></svg></button>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #f0eeeb"><span style="font-size:15px;font-weight:600;color:#201e1d">문의사항</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c3bfbc" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 15 12 9 18"/></svg></div>
+            <button onClick="{{ goLogin }}" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:16px;border:none;border-bottom:1px solid #f0eeeb;background:#fff;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#faf8f6"><span style="font-size:15px;font-weight:600;color:#201e1d">로그아웃</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c3bfbc" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 15 12 9 18"/></svg></button>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px"><span style="font-size:15px;font-weight:600;color:#d0442a">탈퇴하기</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e6b4ab" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 15 12 9 18"/></svg></div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isEditProfile }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:31;background:#f3f2f2;overflow-y:auto;animation:rg-fadeup .3s ease both">
+        <div style="padding:64px 24px 40px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <button onClick="{{ goSettings }}" style="flex:none;width:38px;height:38px;border-radius:50%;background:#fff;border:1px solid #eae7e4;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:#f2f0ed"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#201e1d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6 9 12 15 18"/></svg></button>
+            <div style="font-size:22px;font-weight:800;color:#201e1d;letter-spacing:-.03em">개인정보 수정</div>
+          </div>
+          <div style="margin-top:24px;display:flex;flex-direction:column;gap:18px">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#605d5d;margin-bottom:8px">이름</div>
+              <input value="{{ name }}" onInput="{{ setName }}" placeholder="홍길동" style="width:100%;padding:14px 16px;border:1.5px solid #e2e0dd;border-radius:12px;font-family:inherit;font-size:15px;color:#201e1d;background:#fff;outline:none" style-focus="border-color:{{ accent }}"/>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#605d5d;margin-bottom:8px">생년월일</div>
+              <input value="{{ birth }}" onInput="{{ setBirth }}" type="date" style="width:100%;padding:14px 16px;border:1.5px solid #e2e0dd;border-radius:12px;font-family:inherit;font-size:15px;color:#201e1d;background:#fff;outline:none" style-focus="border-color:{{ accent }}"/>
+              <sc-if value="{{ ageError }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:8px;font-size:12.5px;font-weight:600;color:#d0442a">만 24세 미만은 이용할 수 없습니다</div>
+              </sc-if>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#605d5d;margin-bottom:8px">성별</div>
+              <div style="display:flex;gap:10px">
+                <button onClick="{{ setMale }}" style="{{ maleStyle }}">남성</button>
+                <button onClick="{{ setFemale }}" style="{{ femaleStyle }}">여성</button>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#605d5d;margin-bottom:8px">전화번호</div>
+              <input value="{{ phone }}" onInput="{{ setPhone }}" placeholder="010-1234-5678" style="width:100%;padding:14px 16px;border:1.5px solid #e2e0dd;border-radius:12px;font-family:inherit;font-size:15px;color:#201e1d;background:#fff;outline:none" style-focus="border-color:{{ accent }}"/>
+            </div>
+          </div>
+          <button onClick="{{ saveProfile }}" style="margin-top:26px;width:100%;padding:16px;border:none;border-radius:14px;background:{{ accent }};color:#fff;font-family:inherit;font-size:15.5px;font-weight:800;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,.12)">저장하기</button>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ scanOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:96;background:#15130f;display:flex;flex-direction:column;animation:rg-fadeup .25s ease both">
+        {{ flashFx }}
+        <div style="padding:58px 26px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:14px">
+          <div>
+            <div style="font-size:26px;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1.1">{{ scanTitle }}</div>
+            <div style="font-size:13px;font-weight:500;color:rgba(255,255,255,.6);margin-top:7px;line-height:1.4">{{ scanDesc }}</div>
+          </div>
+          <button onClick="{{ cancelScan }}" style="flex:none;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.12);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-top:2px" style-hover="background:rgba(255,255,255,.2)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 30px">
+          <sc-if value="{{ scanning }}" hint-placeholder-val="{{ true }}">
+          <div style="position:relative;width:248px;height:248px;border-radius:24px;overflow:hidden;background:rgba(255,255,255,.05)">
+            <svg width="118" height="118" viewBox="0 0 24 24" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);opacity:.16" fill="#fff"><path d="M3 3h7v7H3V3zm2 2v3h3V5H5zm9-2h7v7h-7V3zm2 2v3h3V5h-3zM3 14h7v7H3v-7zm2 2v3h3v-3H5zm11-2h3v2h-3v-2zm4 0h2v3h-2v-3zm-4 3h2v4h-4v-2h2v-2zm3 2h3v2h-3v-2z"/></svg>
+            <span style="position:absolute;left:12px;top:12px;width:38px;height:38px;border-top:5px solid {{ scanColor }};border-left:5px solid {{ scanColor }};border-radius:14px 0 0 0"></span>
+            <span style="position:absolute;right:12px;top:12px;width:38px;height:38px;border-top:5px solid {{ scanColor }};border-right:5px solid {{ scanColor }};border-radius:0 14px 0 0"></span>
+            <span style="position:absolute;left:12px;bottom:12px;width:38px;height:38px;border-bottom:5px solid {{ scanColor }};border-left:5px solid {{ scanColor }};border-radius:0 0 0 14px"></span>
+            <span style="position:absolute;right:12px;bottom:12px;width:38px;height:38px;border-bottom:5px solid {{ scanColor }};border-right:5px solid {{ scanColor }};border-radius:0 0 14px 0"></span>
+            <div style="position:absolute;left:10px;right:10px;top:12px;height:3px;border-radius:3px;background:{{ scanColor }};box-shadow:0 0 14px 2px {{ scanColor }};animation:rg-scan 1.6s ease-in-out infinite alternate"></div>
+          </div>
+          <div style="margin-top:24px;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);padding:7px 16px;border-radius:20px">
+            <span style="width:8px;height:8px;border-radius:50%;background:{{ scanColor }}"></span>
+            <span style="font-size:14px;font-weight:800;color:#fff;letter-spacing:-.01em">{{ scanProgress }}</span>
+          </div>
+          </sc-if>
+          <sc-if value="{{ scanned }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:20px;animation:rg-pop .4s cubic-bezier(.18,.7,.28,1.3) both">
+            <div style="width:104px;height:104px;border-radius:50%;background:{{ scanColor }};display:flex;align-items:center;justify-content:center;box-shadow:0 14px 34px rgba(0,0,0,.45)">
+              <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <div style="font-size:21px;font-weight:800;color:#fff;letter-spacing:-.02em">{{ scanDoneText }}</div>
+          </div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ scanning }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:0 30px calc(42px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:22px">
+          <button onClick="{{ capture }}" style="width:78px;height:78px;border-radius:50%;background:transparent;border:4px solid rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0" style-hover="border-color:#fff">
+            <span style="width:60px;height:60px;border-radius:50%;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.4)"></span>
+          </button>
+        </div>
+        </sc-if>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:50">
+        <div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(70,66,60,.4);animation:rg-fadeup .2s ease both"></div>
+        <div style="position:absolute;top:0;left:0;bottom:0;width:80%;max-width:300px;background:#ededed;padding:60px 20px 0;display:flex;flex-direction:column;box-shadow:10px 0 40px rgba(0,0,0,.25);animation:rg-slide .3s cubic-bezier(.2,.7,.3,1) both;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:14px;padding:0 4px">
+            <div style="flex:none;width:54px;height:54px;border-radius:50%;background:{{ accent }};display:flex;align-items:center;justify-content:center">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="3.2"/><circle cx="18" cy="17" r="3.2"/><path d="M6 17 10 8h5l3 9M10 8l2 5h6"/></svg>
+            </div>
+            <div>
+              <div style="font-size:20px;font-weight:800;color:#201e1d;letter-spacing:-.02em">{{ appName }}</div>
+              <div style="font-size:12px;color:#7d7979;margin-top:2px">자전거 재배치 파트너</div>
+            </div>
+          </div>
+          <div style="margin-top:34px;display:flex;flex-direction:column;gap:6px">
+            <button onClick="{{ goHome }}" style="{{ navHomeStyle }}">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
+              메인 지도
+            </button>
+            <button onClick="{{ goRewards }}" style="{{ navRewardsStyle }}">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M9.5 9.5 12 15 14.5 9.5M12 15v3M10 16.5h4M10 18h4"/></svg>
+              리워드 확인
+            </button>
+            <button onClick="{{ goSettings }}" style="{{ navSettingsStyle }}">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3.5 13 6a6.7 6.7 0 0 1 2 1.2l2.5-.8 1.5 2.6-2 1.6a6.7 6.7 0 0 1 0 2.4l2 1.6-1.5 2.6-2.5-.8A6.7 6.7 0 0 1 13 20l-1 2.5h-2L9 20a6.7 6.7 0 0 1-2-1.2l-2.5.8L3 17l2-1.6a6.7 6.7 0 0 1 0-2.4L3 11.4 4.5 8.8 7 9.6A6.7 6.7 0 0 1 9 8.4L10 3.5z"/></svg>
+              환경설정
+            </button>
+          </div>
+          <div style="margin-top:auto;height:110px;position:relative">
+            <div style="position:absolute;left:-40px;right:-40px;bottom:-50px;height:150px;background:{{ accent }};border-radius:50% 50% 0 0"></div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:442,&quot;height&quot;:896},&quot;appName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;타슈캐스트&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    this.TOTAL = 8;
+    this.STATIONS = [ { name: '유성온천역', cap: 5 }, { name: '대전시청역', cap: 4 } ];
+    this.HISTORY = [
+      { title: '재배치 완료 · 유성온천역', date: '2026.07.21', pts: '+500 P' },
+      { title: '재배치 완료 · 대전시청역', date: '2026.07.20', pts: '+800 P' },
+      { title: '재배치 완료 · 월드컵경기장', date: '2026.07.19', pts: '+1,200 P' },
+      { title: '재배치 완료 · 정부청사역', date: '2026.07.18', pts: '+600 P' },
+      { title: '재배치 완료 · 유성구청', date: '2026.07.17', pts: '+900 P' },
+      { title: '재배치 완료 · 갑천역', date: '2026.07.16', pts: '+400 P' },
+      { title: '재배치 완료 · 카이스트', date: '2026.07.15', pts: '+1,000 P' }
+    ];
+    this.state = { screen: 'loading', view: 'map', mapPhase: 'collect', drawer: false, name: '', birth: '', gender: '', residence: '', phone: '', reward: false, sugOpen: false, scan: null, scanned: false, scanCount: 0, scanTarget: 0, collected: 0, deployed: 0, stationIdx: 0, deployedHere: 0, showAllHistory: false, noStation: false };
+    this.addr = ['대전광역시 유성구 대학로 99','대전광역시 유성구 월드컵대로 32','대전광역시 유성구 계룡로 121','대전광역시 유성구 온천로 45','대전광역시 유성구 유성대로 668','대전광역시 서구 둔산로 100','대전광역시 서구 계룡로 314','대전광역시 중구 대종로 480','대전광역시 유성구 봉명동 536'];
+  }
+  calcAge(birth){
+    if (!birth) return null;
+    const b = new Date(birth);
+    if (isNaN(b.getTime())) return null;
+    const t = new Date();
+    let a = t.getFullYear() - b.getFullYear();
+    const m = t.getMonth() - b.getMonth();
+    if (m < 0 || (m === 0 && t.getDate() < b.getDate())) a--;
+    return a;
+  }
+  acc(){ return this.state.mapPhase === 'collect' ? '#1FA35C' : '#F7941D'; }
+  scanTargetFor(kind){
+    return kind === 'collect' ? this.TOTAL : Math.min(this.STATIONS[this.state.stationIdx].cap, this.TOTAL - this.state.deployed);
+  }
+  openScan(kind){ this.setState({ scan: kind, scanned: false, scanCount: 0, scanTarget: this.scanTargetFor(kind), drawer: false }); }
+  capture(){
+    if (this.state.scanned || this._cool) return;
+    this._cool = true; clearTimeout(this._coolT);
+    this._coolT = setTimeout(() => { this._cool = false; }, 700);
+    const n = this.state.scanCount + 1;
+    if (n >= this.state.scanTarget){
+      this.setState({ scanCount: n, scanned: true });
+      clearTimeout(this._scanT2);
+      this._scanT2 = setTimeout(() => this.finishScan(), 1050);
+    } else {
+      this.setState({ scanCount: n });
+    }
+  }
+  finishScan(){
+    const kind = this.state.scan;
+    if (kind === 'collect'){
+      this.setState({ collected: this.TOTAL, scan: null, scanned: false, mapPhase: 'deploy', stationIdx: 0, deployed: 0 });
+    } else {
+      const d = this.state.deployed + this.state.scanTarget;
+      if (d >= this.TOTAL) this.setState({ deployed: d, scan: null, scanned: false, reward: true });
+      else if (this.state.stationIdx + 1 < this.STATIONS.length) this.setState({ deployed: d, stationIdx: this.state.stationIdx + 1, scan: null, scanned: false });
+      else this.setState({ deployed: d, scan: null, scanned: false, noStation: true });
+    }
+  }
+  cancelScan(){ clearTimeout(this._scanT2); this.setState({ scan: null, scanned: false }); }
+  navStyle(active, color){
+    return 'display:flex;align-items:center;gap:14px;padding:15px 16px;border-radius:14px;cursor:pointer;border:none;width:100%;font-family:inherit;font-size:16px;font-weight:700;text-align:left;'
+      + (active ? ('background:' + color + '2e;color:' + color + ';') : 'background:transparent;color:#201e1d;');
+  }
+  matchAddr(){
+    const q = (this.state.residence || '').replace(/\s/g,'');
+    if (!this.state.sugOpen || !q) return [];
+    return this.addr.filter(a => a.replace(/\s/g,'').includes(q) && a !== this.state.residence).slice(0, 5);
+  }
+  startTimer(){
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ screen: 'login' }), 3200);
+  }
+  segStyle(active, color){
+    return 'flex:1;padding:14px;border-radius:12px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;'
+      + (active ? ('border:1.5px solid ' + color + ';background:' + color + ';color:#fff;') : 'border:1.5px solid #e2e0dd;background:#fff;color:#201e1d;');
+  }
+  componentDidMount(){
+    this.startTimer();
+    this._onMsg = (e) => { if (e.data && e.data.type === 'addr' && e.data.city) this.setState({ city: e.data.city, address: e.data.address || '' }); };
+    window.addEventListener('message', this._onMsg);
+  }
+  componentWillUnmount(){ clearTimeout(this._t); window.removeEventListener('message', this._onMsg); }
+  renderVals(){
+    return {
+      isLoading: this.state.screen === 'loading',
+      isLogin: this.state.screen === 'login',
+      isInfo: this.state.screen === 'info',
+      isMap: this.state.screen === 'map',
+      isHome: this.state.view === 'map',
+      isRewards: this.state.view === 'rewards',
+      isSettings: this.state.view === 'settings',
+      isEditProfile: this.state.view === 'editProfile',
+      goEditProfile: () => this.setState({ view: 'editProfile', drawer: false }),
+      saveProfile: () => { if (this.calcAge(this.state.birth) !== null && this.calcAge(this.state.birth) < 24) return; this.setState({ view: 'settings' }); },
+      profName: this.state.name || '-',
+      profBirth: this.state.birth || '-',
+      profGender: this.state.gender || '-',
+      profPhone: this.state.phone || '-',
+      email: this.state.email || 'rider@gmail.com',
+      drawerOpen: this.state.drawer,
+      accent: this.acc(),
+      rewardColor: this.acc(),
+      rewardSoft: this.acc() + '22',
+      today: (() => { const d = new Date(); return d.getFullYear() + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0'); })(),
+      rewardHistory: this.state.showAllHistory ? this.HISTORY : this.HISTORY.slice(0, 3),
+      historyExpandable: this.HISTORY.length > 3,
+      historyToggleText: this.state.showAllHistory ? '접기' : ('더 보기 (' + (this.HISTORY.length - 3) + ')'),
+      chevronRot: this.state.showAllHistory ? 'rotate(180deg)' : 'rotate(0deg)',
+      toggleHistory: () => this.setState({ showAllHistory: !this.state.showAllHistory }),
+      noStationOpen: this.state.noStation,
+      closeNoStation: () => this.setState({ noStation: false, mapPhase: 'idle' }),
+      navRewardsStyle: this.navStyle(this.state.view === 'rewards', this.acc()),
+      navHomeStyle: this.navStyle(this.state.view === 'map', this.acc()),
+      navSettingsStyle: this.navStyle(this.state.view === 'settings', this.acc()),
+      appName: this.props.appName ?? '타슈캐스트',
+      city: this.state.city ?? this.props.city ?? '대전광역시',
+      address: this.state.address ?? this.props.address ?? '유성구 대학로 99',
+      name: this.state.name,
+      birth: this.state.birth,
+      ageError: (() => { const a = this.calcAge(this.state.birth); return a !== null && a < 24; })(),
+      mapPhase: this.state.mapPhase,
+      isCollect: this.state.mapPhase === 'collect',
+      isDeploy: this.state.mapPhase === 'deploy',
+      collectDone: () => this.setState({ mapPhase: 'deploy' }),
+      phone: this.state.phone,
+      residence: this.state.residence,
+      suggestions: this.matchAddr().map(a => ({ text: a, pick: () => this.setState({ residence: a, sugOpen: false }) })),
+      hasSuggest: this.matchAddr().length > 0,
+      rewardOpen: this.state.reward,
+      maleStyle: this.segStyle(this.state.gender === '남성', '#2f6fed'),
+      femaleStyle: this.segStyle(this.state.gender === '여성', '#e6559b'),
+      setName: (e) => this.setState({ name: e.target.value }),
+      setBirth: (e) => this.setState({ birth: e.target.value }),
+      setPhone: (e) => this.setState({ phone: e.target.value }),
+      setResidence: (e) => this.setState({ residence: e.target.value, sugOpen: true }),
+      setMale: () => this.setState({ gender: '남성' }),
+      setFemale: () => this.setState({ gender: '여성' }),
+      showReward: () => this.setState({ reward: true }),
+      hideReward: () => this.setState({ reward: false, mapPhase: 'idle' }),
+      scanOpen: this.state.scan !== null,
+      scanning: this.state.scan !== null && !this.state.scanned,
+      scanned: this.state.scanned,
+      scanColor: this.state.scan === 'collect' ? '#1FA35C' : '#F7941D',
+      scanTitle: this.state.scan === 'collect' ? '타슈 회수 QR' : '타슈 재배치 QR',
+      scanDesc: 'QR 코드를 사각형 안에 맞추고 촬영 버튼으로 ' + this.state.scanTarget + '개를 차례로 스캔하세요',
+      scanDoneText: this.state.scan === 'collect' ? '타슈 회수 완료' : '타슈 재배치 완료',
+      scanProgress: this.state.scanCount + ' / ' + this.state.scanTarget,
+      flashFx: (this.state.scan && this.state.scanCount > 0) ? React.createElement('div', { key: 'fl' + this.state.scanCount, style: { position: 'absolute', inset: 0, background: this.state.scan === 'collect' ? '#1FA35C' : '#F7941D', opacity: 0, pointerEvents: 'none', zIndex: 20, animation: 'rg-flash .45s ease-out' } }) : null,
+      collected: this.state.collected,
+      deployed: this.state.deployed,
+      total: this.TOTAL,
+      stationName: this.STATIONS[this.state.stationIdx].name,
+      stationRemain: this.STATIONS[this.state.stationIdx].cap,
+      stationIdx: this.state.stationIdx,
+      capture: () => this.capture(),
+      scanCollect: () => this.openScan('collect'),
+      scanDeploy: () => this.openScan('deploy'),
+      cancelScan: () => this.cancelScan(),
+      goLogin: () => { clearTimeout(this._t); this.setState({ screen: 'login' }); },
+      googleLogin: () => this.setState({ screen: 'info' }),
+      submitInfo: () => { const a = this.calcAge(this.state.birth); if (this.state.birth && a !== null && a >= 24) this.setState({ screen: 'map', view: 'map', mapPhase: 'collect', collected: 0, deployed: 0, stationIdx: 0, deployedHere: 0 }); },
+      openDrawer: () => this.setState({ drawer: true }),
+      closeDrawer: () => this.setState({ drawer: false }),
+      goHome: () => this.setState({ view: 'map', drawer: false }),
+      goRewards: () => this.setState({ view: 'rewards', drawer: false }),
+      goSettings: () => this.setState({ view: 'settings', drawer: false }),
+      replay: () => { this.setState({ screen: 'loading' }, () => this.startTimer()); },
+      recenter: () => { const f = document.querySelector('iframe[title="map"]'); if (f && f.contentWindow) f.contentWindow.postMessage('recenter', '*'); },
+      research: () => {
+        if (this.state.mapPhase === 'idle') { this.setState({ mapPhase: 'collect', collected: 0, deployed: 0, stationIdx: 0, deployedHere: 0 }); return; }
+        const f = document.querySelector('iframe[title="map"]'); if (f && f.contentWindow) { try { f.contentWindow.location.reload(); } catch (err) { f.src = f.src; } }
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

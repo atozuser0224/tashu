@@ -17,14 +17,17 @@ function Invoke-JsonPost {
     }
     if ($null -ne $Body) {
         $parameters.ContentType = "application/json"
-        $parameters.Body = $Body | ConvertTo-Json -Depth 10
+        $json = $Body | ConvertTo-Json -Depth 20 -Compress
+        $parameters.Body = [Text.Encoding]::UTF8.GetBytes($json)
     }
     Invoke-RestMethod @parameters
 }
 
 $status = Invoke-RestMethod "$baseUrl/api/v1/test/status"
 Invoke-JsonPost "$baseUrl/api/v1/test/reset" $adminHeaders $null | Out-Null
-$plan = Invoke-JsonPost "$baseUrl/api/v1/test/demo/plan" $adminHeaders $null
+$scenario = Invoke-RestMethod "$baseUrl/api/v1/test/core-scenarios/sample" -Headers $adminHeaders
+$scenario.use_tmap = $false
+$plan = Invoke-JsonPost "$baseUrl/api/v1/test/core-scenarios/plan" $adminHeaders $scenario
 $missions = Invoke-RestMethod "$baseUrl/api/v1/operations/missions" -Headers $adminHeaders
 $missionId = $missions.missions[0].mission_id
 $mission = Invoke-RestMethod "$baseUrl/api/v1/operations/missions/$missionId" -Headers $adminHeaders

@@ -23,11 +23,14 @@ python -m uvicorn app.main:app --reload
 
 ## 테스트 패널
 
-`TEST_MODE=true`로 실행하면 `/test-panel`에서 실제 외부 작업 없이 전체 흐름을 시험할 수 있다. 이 모드에서는 JWT 로그인, 관리자 QR 키, Play Integrity/App Attest 검증을 우회하며 실제 타슈·TMAP·결제 API도 호출하지 않는다.
+`TEST_MODE=true`로 실행하면 `/test-panel`에서 코어 모델 JSON부터 기사 배정, TMAP 지도, QR 반납까지 전체 흐름을 시험할 수 있다. 이 모드에서는 JWT 로그인, 관리자 QR 키, Play Integrity/App Attest 검증을 우회한다. TMAP 키를 입력하거나 서버 환경변수에 설정한 경우에만 공식 TMAP 지도와 차량 경로 API를 호출한다.
 
 패널에서 지원하는 작업:
 
-- 내장 가상 수요·재고로 재배치 계획 생성
+- 코어 모델 JSON 업로드 또는 내장 JSON 더미 불러오기
+- 코어 예측 순유입·부족도·시작 재고를 이용한 기사별 재배치 계획 생성
+- TMAP 지도에서 기사별 색상 경로, 출발·픽업·반납 마커와 정차 순서 확인
+- TMAP 차량 경로의 회전 안내·도로명·거리 확인
 - 관리자 화면에서 대여소별 스캔 가능한 SVG QR 생성·미리보기
 - 사용자 역할을 관리자 또는 테스트 기사(김기사/이기사)로 즉시 전환
 - 테스트 기사 화면에서 미션 수락 → 운행 시작 → 대여소 도착을 단계별 실행
@@ -41,6 +44,8 @@ python -m uvicorn app.main:app --reload
 테스트 요청은 `X-Test-Role: admin|operator|driver`와 기사인 경우 `X-Test-Driver-Id` 헤더를 사용한다. 패널이 이 헤더를 자동으로 넣으므로 별도 로그인은 필요 없다. 관리자가 QR을 생성하면 브라우저의 테스트 저장소에 payload가 보관되고, 같은 패널에서 기사 역할로 바꾸면 반납 단계의 가상 스캔에 사용된다. 테스트 전용 QR API는 `POST /api/v1/test/stations/{station_id}/qr`이며 프론트가 바로 표시할 수 있는 `svg_data_url`과 스캔용 `qr_payload`를 함께 반환한다. `TEST_MODE=false`로 실행하면 패널과 `/api/v1/test/*`는 404가 되고 기존 JWT·QR·기기 검증이 다시 적용된다.
 
 실행 중인 8765 테스트 서버에 관리자 QR 생성과 기사 도착·픽업·반납 흐름을 실제 HTTP로 검증하려면 `powershell -File scripts/verify_test_panel_http.ps1`을 실행한다.
+
+패널은 CSV를 요구하지 않는다. 코어 JSON은 `CorePayload`, `{"core": {...}}` 또는 기존 `PlanRequest` 형식을 지원하며, 대여소에 `available_bikes`와 `capacity`를 추가하면 해당 과거 시점의 초기 재고로 사용한다. 생략하면 테스트용 초기 재고를 `predicted_net_flow`에서 유도한다. `GET /api/v1/test/core-scenarios/sample`로 더미 JSON을 받고 `POST /api/v1/test/core-scenarios/plan`으로 기사 배정과 미션 발행을 한 번에 실행한다. 패널에 직접 입력한 TMAP 키는 `X-Test-Tmap-Key` 헤더와 공식 지도 SDK에만 전달되고 저장하지 않는다.
 
 ## 프론트엔드 연동
 
@@ -56,11 +61,11 @@ python -m uvicorn app.main:app --reload
 - `data_sources`: 실시간 타슈 API 사용 여부와 거리 계산 방식
 - `published_mission_ids`: 계획과 동시에 발행된 기사 미션 ID
 
-기본 CORS 허용 주소는 `http://localhost:3000`, `http://localhost:5173`이다. 운영 주소는 `FRONTEND_ORIGINS` 환경변수에 쉼표로 나열한다.
+기본 CORS 허용 주소는 `http://localhost:3000`, `http://localhost:5173`, Expo Web의 `http://localhost:8081`, `http://127.0.0.1:8081`이다. 운영 주소는 `FRONTEND_ORIGINS` 환경변수에 쉼표로 나열한다.
 
 `TMAP_APP_KEY`가 설정되면 `map_data.routes[].coordinates`는 TMAP 도로 GeoJSON을 `lat/lng`로 정규화한 실제 차량 경로다. 픽업과 반납 순서를 보존하면서 도로별 회전 안내까지 받기 위해 자동차 경로안내 API의 고정 순서 `passList`를 사용한다. 한 요청의 최대 경유지 5개를 넘으면 여러 요청으로 나눈다. TMAP 장애나 키 미설정 시에만 Haversine 직선 미리보기로 폴백하며 `warnings`와 `data_sources.distance`로 구분할 수 있다.
 
-키는 요청 JSON이나 Git 저장소에 넣지 않는다. `.env.example`에는 변수명만 있으며 실제 키는 서버 환경변수 또는 배포 플랫폼의 Secret으로 주입한다. 동일 경로 응답은 호출량 보호를 위해 메모리에 5분만 캐시하며 서버에 영구 저장하지 않는다.
+운영 서버의 `TMAP_APP_KEY`는 요청 JSON에 넣지 않고 서버 환경변수 또는 배포 플랫폼의 Secret으로 주입한다. 단, React Native 테스트 앱에는 사용자 요청에 따라 테스트 키가 기본값으로 포함되어 있으며 운영 배포 전 교체하거나 제거해야 한다. 동일 경로 응답은 호출량 보호를 위해 메모리에 5분만 캐시하며 서버에 영구 저장하지 않는다.
 
 ## 운영 미션과 리워드
 

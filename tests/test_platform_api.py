@@ -19,6 +19,22 @@ def _plan(client: TestClient, admin: dict[str, str]) -> dict:
     return response.json()
 
 
+def test_expo_web_cors_origin_is_allowed():
+    with TestClient(app) as client:
+        response = client.options(
+            "/api/v1/test/core-scenarios/sample",
+            headers={
+                "Origin": "http://localhost:8081",
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "X-Test-Role",
+            },
+        )
+        assert response.status_code == 200
+        assert response.headers["access-control-allow-origin"] == (
+            "http://localhost:8081"
+        )
+
+
 def test_auth_refresh_rotation_and_object_ownership():
     with TestClient(app) as client:
         auth = setup_auth(client)
@@ -256,7 +272,8 @@ def test_test_mode_panel_bypasses_security_and_resets(monkeypatch):
     with TestClient(app) as client:
         panel = client.get("/test-panel")
         assert panel.status_code == 200
-        assert "타슈 재배치 테스트 패널" in panel.text
+        assert 'id="coreFile"' in panel.text
+        assert 'id="tmapMap"' in panel.text
         status = client.get("/api/v1/test/status").json()
         assert status["authentication_bypassed"] is True
 
