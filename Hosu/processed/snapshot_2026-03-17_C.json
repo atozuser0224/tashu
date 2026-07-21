@@ -5,7 +5,7 @@
     "time": "16:00",
     "mode": "demo",
     "demo_mode": true,
-    "note": "predicted_net_flow는 수급 경향값"
+    "note": "class는 다음 회차 수급 예측(부족/정상/과잉). 확률 기반 보조지표이며 최종 판단은 관제팀."
   },
   "priority_bikes": [
     {
@@ -88,8 +88,13 @@
         "real_available": 7
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.2,
-        "shortage_pressure": 0.0
+        "class": "shortage",
+        "probs": {
+          "shortage": 0.524,
+          "normal": 0.244,
+          "surplus": 0.232
+        },
+        "shortage_pressure": 0.52
       }
     },
     {
@@ -110,8 +115,13 @@
         "real_available": 11
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.5,
-        "shortage_pressure": 0.0
+        "class": "shortage",
+        "probs": {
+          "shortage": 0.425,
+          "normal": 0.182,
+          "surplus": 0.393
+        },
+        "shortage_pressure": 0.42
       }
     },
     {
@@ -132,8 +142,13 @@
         "real_available": 13
       },
       "stgnn_prediction": {
-        "predicted_net_flow": -0.3,
-        "shortage_pressure": 0.02
+        "class": "shortage",
+        "probs": {
+          "shortage": 0.755,
+          "normal": 0.2,
+          "surplus": 0.045
+        },
+        "shortage_pressure": 0.76
       }
     },
     {
@@ -154,8 +169,13 @@
         "real_available": 7
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.5,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.241,
+          "normal": 0.207,
+          "surplus": 0.552
+        },
+        "shortage_pressure": 0.24
       }
     },
     {
@@ -176,8 +196,13 @@
         "real_available": 9
       },
       "stgnn_prediction": {
-        "predicted_net_flow": -0.6,
-        "shortage_pressure": 0.03
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.311,
+          "normal": 0.257,
+          "surplus": 0.432
+        },
+        "shortage_pressure": 0.31
       }
     },
     {
@@ -198,8 +223,13 @@
         "real_available": 28
       },
       "stgnn_prediction": {
-        "predicted_net_flow": -2.4,
-        "shortage_pressure": 0.12
+        "class": "shortage",
+        "probs": {
+          "shortage": 0.779,
+          "normal": 0.22,
+          "surplus": 0.001
+        },
+        "shortage_pressure": 0.78
       }
     },
     {
@@ -220,8 +250,13 @@
         "real_available": 9
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.7,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.087,
+          "normal": 0.126,
+          "surplus": 0.787
+        },
+        "shortage_pressure": 0.09
       }
     },
     {
@@ -242,8 +277,13 @@
         "real_available": 3
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.5,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.018,
+          "normal": 0.079,
+          "surplus": 0.903
+        },
+        "shortage_pressure": 0.02
       }
     },
     {
@@ -264,8 +304,13 @@
         "real_available": 6
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.0,
-        "shortage_pressure": 0.0
+        "class": "shortage",
+        "probs": {
+          "shortage": 0.581,
+          "normal": 0.169,
+          "surplus": 0.25
+        },
+        "shortage_pressure": 0.58
       }
     },
     {
@@ -286,8 +331,13 @@
         "real_available": 7
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.6,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.234,
+          "normal": 0.241,
+          "surplus": 0.525
+        },
+        "shortage_pressure": 0.23
       }
     },
     {
@@ -308,8 +358,13 @@
         "real_available": 5
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 1.1,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.029,
+          "normal": 0.113,
+          "surplus": 0.858
+        },
+        "shortage_pressure": 0.03
       }
     },
     {
@@ -330,8 +385,13 @@
         "real_available": 9
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.4,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.293,
+          "normal": 0.202,
+          "surplus": 0.505
+        },
+        "shortage_pressure": 0.29
       }
     },
     {
@@ -352,8 +412,13 @@
         "real_available": 6
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.4,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.084,
+          "normal": 0.16,
+          "surplus": 0.756
+        },
+        "shortage_pressure": 0.08
       }
     },
     {
@@ -374,8 +439,13 @@
         "real_available": 11
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.5,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.113,
+          "normal": 0.223,
+          "surplus": 0.663
+        },
+        "shortage_pressure": 0.11
       }
     },
     {
@@ -396,8 +466,13 @@
         "real_available": 7
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.6,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.099,
+          "normal": 0.13,
+          "surplus": 0.771
+        },
+        "shortage_pressure": 0.1
       }
     },
     {
@@ -418,8 +493,13 @@
         "real_available": 8
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.3,
-        "shortage_pressure": 0.0
+        "class": "normal",
+        "probs": {
+          "shortage": 0.212,
+          "normal": 0.75,
+          "surplus": 0.038
+        },
+        "shortage_pressure": 0.21
       }
     },
     {
@@ -440,8 +520,13 @@
         "real_available": 5
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.7,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.192,
+          "normal": 0.238,
+          "surplus": 0.57
+        },
+        "shortage_pressure": 0.19
       }
     },
     {
@@ -462,8 +547,13 @@
         "real_available": 6
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.4,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.093,
+          "normal": 0.221,
+          "surplus": 0.686
+        },
+        "shortage_pressure": 0.09
       }
     },
     {
@@ -484,8 +574,13 @@
         "real_available": 2
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.4,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.086,
+          "normal": 0.118,
+          "surplus": 0.796
+        },
+        "shortage_pressure": 0.09
       }
     },
     {
@@ -506,8 +601,13 @@
         "real_available": 10
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.3,
-        "shortage_pressure": 0.0
+        "class": "shortage",
+        "probs": {
+          "shortage": 0.61,
+          "normal": 0.361,
+          "surplus": 0.028
+        },
+        "shortage_pressure": 0.61
       }
     },
     {
@@ -528,7 +628,12 @@
         "real_available": 0
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 3.8,
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.001,
+          "normal": 0.013,
+          "surplus": 0.987
+        },
         "shortage_pressure": 0.0
       }
     },
@@ -550,8 +655,13 @@
         "real_available": 0
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 1.0,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.014,
+          "normal": 0.114,
+          "surplus": 0.872
+        },
+        "shortage_pressure": 0.01
       }
     },
     {
@@ -572,8 +682,13 @@
         "real_available": 7
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.4,
-        "shortage_pressure": 0.0
+        "class": "shortage",
+        "probs": {
+          "shortage": 0.42,
+          "normal": 0.191,
+          "surplus": 0.39
+        },
+        "shortage_pressure": 0.42
       }
     },
     {
@@ -594,8 +709,13 @@
         "real_available": 5
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.2,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.238,
+          "normal": 0.354,
+          "surplus": 0.408
+        },
+        "shortage_pressure": 0.24
       }
     },
     {
@@ -616,8 +736,13 @@
         "real_available": 9
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.4,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.312,
+          "normal": 0.199,
+          "surplus": 0.489
+        },
+        "shortage_pressure": 0.31
       }
     },
     {
@@ -638,8 +763,13 @@
         "real_available": 6
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.4,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.276,
+          "normal": 0.19,
+          "surplus": 0.534
+        },
+        "shortage_pressure": 0.28
       }
     },
     {
@@ -660,8 +790,13 @@
         "real_available": 0
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.8,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.04,
+          "normal": 0.094,
+          "surplus": 0.867
+        },
+        "shortage_pressure": 0.04
       }
     },
     {
@@ -682,8 +817,13 @@
         "real_available": 8
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.6,
-        "shortage_pressure": 0.0
+        "class": "normal",
+        "probs": {
+          "shortage": 0.289,
+          "normal": 0.466,
+          "surplus": 0.245
+        },
+        "shortage_pressure": 0.29
       }
     },
     {
@@ -704,8 +844,13 @@
         "real_available": 6
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.5,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.089,
+          "normal": 0.104,
+          "surplus": 0.807
+        },
+        "shortage_pressure": 0.09
       }
     },
     {
@@ -726,7 +871,12 @@
         "real_available": 0
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 1.9,
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.002,
+          "normal": 0.03,
+          "surplus": 0.968
+        },
         "shortage_pressure": 0.0
       }
     },
@@ -748,8 +898,13 @@
         "real_available": 5
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.5,
-        "shortage_pressure": 0.0
+        "class": "shortage",
+        "probs": {
+          "shortage": 0.572,
+          "normal": 0.224,
+          "surplus": 0.204
+        },
+        "shortage_pressure": 0.57
       }
     },
     {
@@ -770,8 +925,13 @@
         "real_available": 5
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.5,
-        "shortage_pressure": 0.0
+        "class": "shortage",
+        "probs": {
+          "shortage": 0.532,
+          "normal": 0.35,
+          "surplus": 0.118
+        },
+        "shortage_pressure": 0.53
       }
     },
     {
@@ -792,8 +952,13 @@
         "real_available": 8
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.1,
-        "shortage_pressure": 0.0
+        "class": "normal",
+        "probs": {
+          "shortage": 0.208,
+          "normal": 0.655,
+          "surplus": 0.137
+        },
+        "shortage_pressure": 0.21
       }
     },
     {
@@ -814,8 +979,13 @@
         "real_available": 8
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.5,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.13,
+          "normal": 0.197,
+          "surplus": 0.673
+        },
+        "shortage_pressure": 0.13
       }
     },
     {
@@ -836,8 +1006,13 @@
         "real_available": 7
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.4,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.175,
+          "normal": 0.265,
+          "surplus": 0.56
+        },
+        "shortage_pressure": 0.17
       }
     },
     {
@@ -858,8 +1033,13 @@
         "real_available": 6
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.8,
-        "shortage_pressure": 0.0
+        "class": "shortage",
+        "probs": {
+          "shortage": 0.445,
+          "normal": 0.32,
+          "surplus": 0.236
+        },
+        "shortage_pressure": 0.44
       }
     },
     {
@@ -880,8 +1060,13 @@
         "real_available": 8
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.6,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.268,
+          "normal": 0.23,
+          "surplus": 0.501
+        },
+        "shortage_pressure": 0.27
       }
     },
     {
@@ -902,8 +1087,13 @@
         "real_available": 4
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.3,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.012,
+          "normal": 0.142,
+          "surplus": 0.846
+        },
+        "shortage_pressure": 0.01
       }
     },
     {
@@ -924,8 +1114,13 @@
         "real_available": 3
       },
       "stgnn_prediction": {
-        "predicted_net_flow": 0.6,
-        "shortage_pressure": 0.0
+        "class": "surplus",
+        "probs": {
+          "shortage": 0.196,
+          "normal": 0.196,
+          "surplus": 0.608
+        },
+        "shortage_pressure": 0.2
       }
     },
     {
@@ -946,8 +1141,13 @@
         "real_available": 12
       },
       "stgnn_prediction": {
-        "predicted_net_flow": -0.4,
-        "shortage_pressure": 0.02
+        "class": "shortage",
+        "probs": {
+          "shortage": 0.52,
+          "normal": 0.274,
+          "surplus": 0.206
+        },
+        "shortage_pressure": 0.52
       }
     }
   ]

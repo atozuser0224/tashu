@@ -25,11 +25,14 @@ def load_artifacts():
     """서버 起動시 1회 호출. 모델·데이터를 메모리에 로드해 이후 요청서 재사용."""
     global _ART
     if _ART is not None: return _ART
-    from model_cls_directed import A3TGCN_Dir
+    from model_mtgnn import MTGNN
     A=torch.tensor(np.load(f'{OUT_DIR}/adjacency_directed.npy')).float()
     stats=json.load(open(f'{OUT_DIR}/norm_stats.json'))
-    model=A3TGCN_Dir(stats['F_node'], 4, hidden=48)
-    model.load_state_dict(torch.load(f'{OUT_DIR}/a3tgcn_dir.pt',map_location='cpu')['state'])
+    # MTGNN: 학습 인접행렬 + 정적 방향 그래프 결합
+    node_index=pd.read_csv(f'{OUT_DIR}/node_index.csv')
+    model=MTGNN(f_node=stats['F_node'], f_global=4, n_nodes=len(node_index),
+                hidden=48, emb_dim=16, use_static=True)
+    model.load_state_dict(torch.load(f'{OUT_DIR}/mtgnn.pt',map_location='cpu')['state'])
     model.eval()
     _ART=dict(
         X_node=np.load(f'{OUT_DIR}/X_node.npy'),
@@ -140,14 +143,29 @@ def compute_snapshot(date=None, round_id=None, mode='demo', demo_mode=True):
         api=int(avail_arr[i]) if avail_arr is not None else None
         real=max(0,api-broken) if api is not None else None
         p_short,p_norm,p_surp=float(probs[i,0]),float(probs[i,1]),float(probs[i,2])
+        # recommendation: 관제팀용 재배치 힌트 (계수는 리허설 때 조정)
+        cls_name=CLS_NAMES[cls[i]]
+        if cls_name=='surplus':
+            action='collect'
+            amount_hint=int(round((api if api is not None else 8)*p_surp*0.4)) if p_surp>0 else 0
+        elif cls_name=='shortage':
+            action='supply'
+            amount_hint=int(round(p_short*6))
+        else:
+            action='hold'; amount_hint=0
+        confidence=round(max(p_short,p_norm,p_surp),2)
         stations.append({"station_id":sid,"station_name":info['name'],
             "location":{"lat":float(info['lat']),"lng":float(info['lng'])},
             "current_weather":{"status":band_to_status(band),"precipitation_mm":round(precip,1),"temperature_c":round(temp,1)},
             "ml_correction":{"api_available":api,"broken_suspected":broken,"real_available":real},
             "stgnn_prediction":{
-                "class":CLS_NAMES[cls[i]],                        # shortage/normal/surplus (히트맵 3색)
+                "class":cls_name,                                 # shortage/normal/surplus (히트맵 3색)
                 "probs":{"shortage":round(p_short,3),"normal":round(p_norm,3),"surplus":round(p_surp,3)},
-                "shortage_pressure":round(p_short,2)}})           # 부족 확률 = 품절 위험 (기존 필드 호환)
+                "shortage_pressure":round(p_short,2),             # 부족 확률 (기존 프론트 호환)
+                "recommendation":{                                # 관제팀용 재배치 힌트
+                    "action":action,                              # collect / supply / hold
+                    "amount_hint":amount_hint,                    # 대략 대수 (확실한 정답 아님, 규모 감)
+                    "confidence":confidence}}})                   # 예측 확률 최대값
 
     return {"meta":{"date":str(row['service_date'].date()),"round_id":row['round_id'],
                     "time":ROUND_TIME[row['round_id']],"mode":mode,"demo_mode":demo_mode,
