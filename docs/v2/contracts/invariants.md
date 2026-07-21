@@ -5,14 +5,18 @@
 ## 1. 데이터와 표현
 
 1. API 원본 `parking_count`에서 추정 고장 대수를 빼지 않는다.
-2. 원본값에는 출처, `observed_at`, `observed_at_basis`를 함께 표시한다. 원천 시각이 없을 때 `collected_at`을 원천 업데이트 시각처럼 표현하지 않는다.
+2. v2.2 재고 원천은 신뢰할 수 있는 원천 관측시각을 제공하지 않는다. 성공 관측은 `observed_at=collected_at`, `observed_at_basis=collected_at`으로 표시하고, 이를 원천 업데이트 시각처럼 표현하지 않는다.
 3. `stale` 또는 `unavailable` 데이터로 예측·대안·정체 신호를 새로 산출하지 않는다.
 4. 총량 무변화를 대여·반납 없음이나 고장의 증거로 표현하지 않는다.
 5. capacity가 성공 응답에서 검증되기 전에는 점유율·만차·빈 거치대 수를 표시하지 않는다.
-6. demo 데이터는 모든 화면에서 식별 가능한 워터마크를 가진다.
-7. `data_source`와 `data_freshness`는 공식 재고 관측 축이다. 날씨·달력·행사·공간 맥락의 상태를 이 필드에 덮어쓰거나 합성하지 않는다.
-8. 합성 맥락을 예측에 하나라도 사용하면 응답 전체를 `data_source=demo`로 강등하고 실제 이동 추천과 운영 성능 집계에서 제외한다.
+6. `response_mode=demo`인 데이터는 모든 화면에서 식별 가능한 워터마크를 가진다.
+7. `data_source`는 `direct_tashu|national_integrated|demo` 중 실제 선택된 공식 재고 snapshot의 수집 경로 하나이며, `data_freshness`와 함께 공식 재고 관측 축을 이룬다. 날씨·달력·행사·공간 맥락 또는 응답 실행 모드를 이 필드에 덮어쓰거나 합성하지 않는다.
+7-a. `direct_tashu`와 `national_integrated`는 독립 run으로 이중 수집한다. 서로 다른 원천의 행을 한 snapshot으로 혼합하거나, 한 원천에서 받은 값을 다른 `data_source`로 표시하지 않는다. 서빙 원천은 versioned 선택 정책으로 고르고 응답에 그대로 노출한다.
+7-b. live 수집기는 원천별 호출 한도·페이지 크기·전체 페이지 완주·재시도 예산을 검증하는 rate/page gate를 통과해야 한다. 누락 페이지가 있는 cycle은 `partial`이며 완전한 정류장 집합처럼 승격하지 않는다.
+8. 합성 맥락을 예측 feature에 하나라도 사용하면 전체 provenance에서 `uses_synthetic_context=true`, 응답 전체를 `response_mode=demo`로 강등하고 실제 이동 추천과 운영 성능 집계에서 제외한다. 선택된 evidence가 모두 실데이터여도 예외가 아니다.
 9. 맥락 결측·지연을 `비 없음`, `행사 없음`, 숫자 `0`으로 대체하지 않는다. `context_status`를 낮추고 검증된 폴백 경로를 사용한다.
+10. `data_source=demo`이면 `response_mode=demo`다. 반대로 live 공식 재고라도 합성 맥락을 사용하면 `data_source`는 원천값을 유지하고 `response_mode`만 demo가 된다.
+11. StationList의 parent와 모든 station item, Forecast의 parent와 모든 alternative item은 같은 `response_mode`를 가져야 한다.
 
 ## 2. 상태와 결정 권한
 
@@ -22,17 +26,20 @@
 4. 인증된 운영기관 연동이 없으면 공식 정비 상태는 항상 `unavailable`이다. `unknown`은 연동은 확인됐지만 해당 상태값만 미확인일 때 사용한다.
 5. LLM 출력은 등급, 상태 전이, 대안 선택, 안전 행동을 결정하지 않는다.
 6. 안전 위험 신고에는 탑승 중지와 공식 신고 안내를 애플리케이션 규칙으로 즉시 제공한다.
-7. `decision_signal.mode=stockout_risk`일 때만 `stockout_probability`와 `stockout_risk_grade`가 non-null이고, `mode=demand_pressure`일 때만 `demand_pressure_grade`가 non-null이다. 다른 mode에서는 `stockout_probability=null`이며 서로 다른 mode의 출력을 동시에 채우지 않는다.
+7. `decision_signal.mode=stockout_risk`일 때만 `horizon_minutes=15`, `stockout_probability`와 `stockout_risk_grade`가 non-null이고, `mode=demand_pressure`는 `horizon_minutes=15`와 `demand_pressure_grade`만 가진다. `current_stock|unavailable`은 horizon과 probability를 null로 두며 서로 다른 mode의 출력을 동시에 채우지 않는다.
 8. `community_report_state=corroborated`는 같은 정류장·같은 category가 유효기간 안에 분리된 signed 익명 세션에서 반복 제출됐다는 뜻일 뿐, 서로 다른 실제 사람이나 공식 사실을 증명하지 않는다.
 9. `data_freshness=fresh`에서는 `stockout_risk|current_stock`, `stale|unavailable`에서는 `demand_pressure|unavailable` mode만 허용한다.
 10. 공식 정비가 `unavailable`이면 `verified=false`, `updated_at/source=null`이고, 그 밖의 공식 상태는 인증된 non-null source와 갱신시각 및 `verified=true`를 가져야 한다.
-11. `StationState.data_freshness=fresh`이면 `inventory`는 non-null `OfficialInventory`여야 한다. 값이 없으면 freshness를 `fresh`로 표시하지 않는다.
+11. `StationState`와 `ForecastResponse`가 `data_freshness=fresh`이면 `inventory`는 non-null `OfficialInventory`여야 한다. 값이 없으면 freshness를 `fresh`로 표시하지 않는다.
 12. `prediction_basis=contextual_ml`은 `context_status=complete`이고 승인된 `feature_contract_version`, `model_version`, `calibration_version`, `threshold_version`이 모두 있을 때만 허용한다.
 12-a. `stockout_probability`는 `mode=stockout_risk`에서만 `0..1`의 non-null 값이며 정확히 `P(parking_count(t+15분)<1)`을 뜻한다. 실제 대여 성공·정상 자전거·고장 확률로 이름을 바꾸지 않는다.
 13. 예측 폴백 순서는 검증된 `contextual_ml` → 검증된 `inventory_temporal` → `current_stock` → snapshot이 없을 때 검증된 `historical_demand` → `unavailable`이다. `inventory_temporal`은 fresh 공식 재고 lag/rolling과 시간 특징만 쓰며 맥락 결측을 대체하지 않는다.
 14. `current_stock|unavailable` mode에서는 `prediction_basis`, `feature_contract_version`, `calibration_version`을 null로 두며 예측을 수행한 것처럼 표현하지 않는다.
 15. `context_evidence`는 최대 2개의 구조화 사실만 담고, `direction`은 모델 신호와의 연관 방향일 뿐 원인·인과관계로 표현하지 않는다.
 16. `stockout_risk`는 `prediction_basis=contextual_ml|inventory_temporal`만, `demand_pressure`는 `prediction_basis=historical_demand`만 허용한다. historical demand는 context evidence가 없는 no-snapshot trip fallback이며 현재 재고나 contextual 예측으로 표현하지 않는다.
+17. 모든 decision signal은 `uses_synthetic_context`를 필수로 가진다. stockout 이외 mode에서는 항상 false이고, evidence 중 하나라도 `synthetic=true`이면 stockout flag도 true여야 한다. false는 선택 evidence만 보고 정하지 않고 전체 feature provenance에서 계산한다.
+18. contextual ML evidence는 `weather|calendar|event|neighbor|temporal`만 허용하고 `inventory`를 금지한다. inventory-temporal evidence는 `inventory`만 허용한다.
+19. weather·calendar·event evidence는 non-null `issued_at`과 `valid_at`을, neighbor·temporal·inventory evidence는 `issued_at=null`과 기준·갱신시각인 `valid_at`을 가져야 한다.
 
 ## 3. LLM
 
@@ -56,6 +63,7 @@
 9. rolling 통계와 인접 정류장 특징은 `prediction_at` 이하의 관측만 사용하고, split 경계의 target horizon을 purge한다.
 10. 사용자 `origin`·검색어·정밀 이동 위치와 커뮤니티 신고·자유 텍스트는 재고/수요 예측 특징 또는 독립 정답으로 사용하지 않는다.
 11. 맥락 모델은 재고·시간 기준선보다 개선되고 보정 게이트를 통과해야 하며, 맥락 추가 이득이 없으면 `inventory_temporal`로 유지한다.
+12. 원시 재고 관측은 원천 정책과 rate/page gate가 허용하면 1분 주기를 선호해 보존한다. 학습용 5분 grid는 각 grid 시각 이하의 최신 관측만 as-of 선택하고, 미래 관측·선형보간·원천 간 혼합으로 빈 구간을 채우지 않으며 선택된 원천과 `collected_at`을 보존한다.
 
 ## 5. 보안과 개인정보
 
@@ -88,4 +96,5 @@
 3. nullable 필드를 추가해도 의미가 불명확하면 배포하지 않는다.
 4. 완료 주장은 자동 테스트 또는 재현 가능한 검수 기록을 동반한다.
 5. `unavailable_after_seconds`는 항상 `stale_after_seconds`보다 커야 하며, 클라이언트는 서버의 `data_freshness` 값을 임의로 재분류하지 않는다.
-6. `prediction_basis`, `context_status`, `feature_contract_version`, `calibration_version`, `context_evidence` 변경은 OpenAPI·enum·mock·서버·클라이언트와 model/feature manifest를 같은 변경 묶음에서 갱신한다.
+6. `response_mode`, `prediction_basis`, `horizon_minutes`, `stockout_probability`, `context_status`, `feature_contract_version`, `calibration_version`, `context_evidence`, `uses_synthetic_context` 변경은 OpenAPI·enum·mock·서버·클라이언트와 model/feature manifest를 같은 변경 묶음에서 갱신한다.
+7. v2.2의 `DataSource` 변경은 breaking change다. 구 enum을 묵시적으로 alias하지 않으며 producer·consumer·fixture를 함께 migration한다.

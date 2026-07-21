@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.1.0",
+  "schema_version": "2.2.0",
   "data_freshness": {
     "fresh": "최신 정보",
     "stale": "정보 지연",
@@ -26,6 +26,7 @@
     "calendar": "달력",
     "event": "행사",
     "neighbor": "인접 정류장",
+    "temporal": "시간 맥락",
     "inventory": "공식 재고 이력"
   },
   "context_evidence_freshness": {
@@ -94,8 +95,12 @@
     "unsure": "판단 어려움"
   },
   "data_source": {
-    "live_datago": "공공데이터포털 조회 경로",
-    "live_direct": "타슈 직접 API 조회 경로",
+    "direct_tashu": "타슈 직접 재고 API 수집 경로",
+    "national_integrated": "전국 통합 자전거 재고 API 수집 경로",
     "demo": "샘플 데이터"
+  },
+  "response_mode": {
+    "live": "실제 운영 응답",
+    "demo": "데모 응답"
   }
 }

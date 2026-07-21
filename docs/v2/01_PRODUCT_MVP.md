@@ -1,6 +1,6 @@
-# 타슈 해커톤 제품 MVP 명세 v2
+# 타슈 제품 MVP 명세 v2.2
 
-> 상태: 구현 기준안  
+> 상태: 데이터 게이트 선행 구현 기준안
 > 범위: 해커톤 데모 및 소규모 사용자 검증  
 > 제품 원칙: **공식 재고, 예측, 커뮤니티 현장 정보를 합치거나 서로의 대체값으로 쓰지 않는다.**
 
@@ -51,8 +51,9 @@
 7. **공식 조치 연결**: 커뮤니티 신고가 공식 고장 신고를 대신하지 않는다고 제출 전후에 알리고 공식 채널 CTA를 제공한다.
 8. **접근 가능한 목록 우선**: 지도는 보조 시각화다. 같은 정보와 기능을 갖춘 목록이 항상 존재해야 한다.
 9. **point-in-time 맥락**: 예측 시점에 알 수 있었던 날씨 예보·휴일·행사 일정과 공식 재고만 사용한다. 미래 실측 날씨, 사후 수정된 행사 정보, 목표시점 이후 주변 재고를 사용하지 않는다.
-10. **근거는 최대 두 개**: 사용자에게는 모델 판단에 실제로 반영된 구조화 근거를 출처·발행 또는 갱신 시각과 함께 최대 두 개만 보여준다. contextual이면 외부 맥락, temporal이면 공식 재고 근거만 허용하며 인과 표현과 raw SHAP 값은 노출하지 않는다.
+10. **근거는 최대 두 개**: 사용자에게는 모델 판단에 실제로 반영된 구조화 근거를 출처·발행 또는 갱신 시각과 함께 최대 두 개만 보여준다. `contextual_ml`이면 `weather|calendar|event|neighbor|temporal`, `inventory_temporal`이면 `inventory`만 허용하며 인과 표현과 raw SHAP 값은 노출하지 않는다.
 11. **개인 입력 격리**: 사용자의 현재 위치는 도보시간 계산에만 사용하고, 위치·검색어·커뮤니티 신고·자유 메모는 예측 feature나 모델 정답으로 사용하지 않는다.
+12. **출처와 실행 모드 분리**: `data_source`는 공식 재고 원천, `response_mode`는 전체 응답이 live 행동에 사용 가능한지 뜻한다. 전체 feature provenance에 합성 입력이 하나라도 있으면 공개 evidence 선택 여부와 무관하게 `uses_synthetic_context=true`, `response_mode=demo`다.
 
 ---
 
@@ -60,7 +61,7 @@
 
 ### 3.1 Core — 15분 후 재고 소진 위험
 
-> 해커톤에서는 live L3를 활성화하지 않는다. 이 Core의 L3 화면은 `data_source=demo` 워터마크 아래에서만 시연하고, 실데이터는 L1 `current_stock` 또는 L2 `demand_pressure`로 강등해 표시한다.
+> 해커톤에서는 live L3를 활성화하지 않는다. 현재는 성공 응답과 7일 이중 수집 비교를 통과한 재고 원천도 없으므로 live L1 `current_stock` 역시 비활성화한다. 이 Core의 L3 화면은 `response_mode=demo` 워터마크 아래에서만 시연하고, 정제 게이트를 통과한 과거 대여 이력은 L2 `demand_pressure`에만 사용한다.
 
 #### 사용자 가치
 
@@ -97,13 +98,14 @@
 #### Core 인수 조건
 
 - 공식 재고 숫자와 예측 등급이 서로 다른 카드·접근성 그룹으로 렌더링된다.
-- 프론트엔드는 예측을 계산하지 않고 서버가 전달한 `decision_signal.mode`, `stockout_risk_grade`, `generated_at`만 표시한다.
+- 프론트엔드는 예측을 계산하지 않고 서버가 전달한 `decision_signal.mode`, `stockout_probability`, `stockout_risk_grade`, `horizon_minutes`, `generated_at`을 사용한다. 기본 UI는 등급을 우선하며 확률 숫자 직접 노출은 별도 이해도 검증 뒤에만 허용한다.
 - `decision_signal.mode !== "stockout_risk"`이면 화면 어디에도 `15분 후 전망`, `재고 소진 위험 낮음/보통/높음` 문구가 나오지 않는다.
 - `stockout_risk_grade`는 `low/medium/high` 또는 `null`만 허용한다. 데이터 부족을 네 번째 등급으로 만들지 않고 모드를 강등한다.
+- `stockout_probability`는 `stockout_risk`에서만 `0..1`, 그 밖의 mode에서는 null이며 `horizon_minutes=15`와 함께 해석한다.
 - UI는 서버 응답의 canonical `data_freshness=fresh|stale|unavailable`을 그대로 사용하고 재계산하지 않는다. `freshness_detail.stale_after_seconds`와 `unavailable_after_seconds`는 설명·진단용 metadata다.
 - `data_freshness`가 `stale` 또는 `unavailable`이면 `stockout_risk_grade`를 숨긴다. `data_source=demo`의 서버 기본 threshold는 600초/1,800초다.
-- 사용자에게 노출하는 근거는 서버가 반환한 구조화 evidence 중 실제 모델 판단에 반영된 최대 두 개로 제한한다. contextual이면 외부 맥락, temporal이면 공식 재고만 허용한다. 각 근거에는 유형, 출처, 발행 또는 갱신 시각이 있어야 하며, 근거가 원인임을 암시하거나 raw SHAP 수치를 보여주지 않는다.
-- contextual ML 결과에는 model·feature contract·station graph·context snapshot 버전을 남긴다. 실제 archived context와 point-in-time 평가가 없으면 live L3가 아니라 `data_source=demo`로만 시연한다.
+- 사용자에게 노출하는 근거는 서버가 반환한 구조화 evidence 중 실제 모델 판단에 반영된 최대 두 개로 제한한다. contextual이면 `weather|calendar|event|neighbor|temporal`, inventory-temporal이면 `inventory`만 허용한다. weather/calendar/event는 non-null 발행시각, 모든 근거는 non-null 유효·갱신 기준시각을 가지며 원인 암시와 raw SHAP 수치를 금지한다.
+- contextual ML 결과에는 model·feature contract·station graph·context snapshot 버전을 내부 provenance에 남긴다. 실제 archived context와 point-in-time 평가가 없으면 `uses_synthetic_context=true`, `response_mode=demo`로만 시연한다.
 - 필요한 맥락이 결측·지연됐을 때 full-context 결과를 유지하거나 결측을 `비 없음/행사 없음`으로 바꾸지 않는다. fresh snapshot이면 별도 승인된 `inventory_temporal`, L1 `current_stock` 순으로 강등하고, snapshot이 stale/unavailable이면 검증된 L2 `demand_pressure`, L0 순으로 강등한다.
 - `0`은 유효한 값이고 `null`은 결측이다. 두 상태가 UI·로그·API에서 구분된다.
 - 모델·규칙 버전과 당시 입력 품질 상태를 분석 로그에 남겨 재현할 수 있다.
@@ -113,7 +115,7 @@
 #### 동작
 
 - 현재 정류장에서 예상 도보 15분 또는 1.2km 이내 후보를 최대 3개 보여준다. 두 값은 설정으로 변경할 수 있다.
-- 공식 재고가 `0`이거나 `data_freshness=stale|unavailable`인 후보는 실제 이동 추천에서 제외한다. `data_source=demo` 후보는 워터마크와 함께 기능 시연에만 사용한다.
+- 공식 재고가 `0`이거나 `data_freshness=stale|unavailable`인 후보는 실제 이동 추천에서 제외한다. `response_mode=demo` 후보는 워터마크와 함께 기능 시연에만 사용한다.
 - `stockout_risk` 모드에서는 각 후보의 승인된 `prediction_basis`가 낸 소진 위험을 `low → medium → high` 순으로 묶는다. 같은 위험 그룹에서 예상 도보시간이 짧은 순, 공식 재고가 많은 순으로 정렬하며 사용자 위치는 이 도보 policy에만 사용한다. `inventory_temporal` 후보를 contextual 후보처럼 표시하지 않는다.
 - `current_stock` 모드에서는 최신성이 확보된 후보를 우선하고, 도보시간이 짧은 순, 공식 재고가 많은 순으로 정렬한다.
 - `demand_pressure` 모드는 현재 재고 스냅샷이 없다는 뜻이므로 정상 추천 후보 자격을 주지 않는다. 대안이 전부 이 모드라면 `현재 재고를 확인할 수 있는 대안이 없어요`라고 알리고 참고 목록으로만 보여준다.
@@ -226,8 +228,8 @@ L2 표본·등급·강등 조건의 단일 출처는 [`02_DATA_AND_EVALUATION.md
 - freshness 판정은 서버의 canonical `data_freshness=fresh|stale|unavailable`을 따른다. UI는 `age_seconds`나 현재 시각으로 이를 재분류하지 않는다.
 - `freshness_detail.stale_after_seconds`와 `unavailable_after_seconds`는 설명·진단용 metadata다. `data_source=demo`의 서버 기본값은 각각 600초와 1,800초이며 UI 로직에 하드코딩하지 않는다.
 - `stale`에서는 현재 숫자에 오래된 정보임을 표시하고 L3를 숨긴다. `unavailable`에서는 현재 숫자와 L3를 모두 숨기고, 검증된 과거 표본이 있으면 L2, 없으면 L0로 내린다.
-- `demo`는 freshness가 아니라 합성·고정·리플레이 데이터를 뜻하는 `data_source` 값이다. 모든 화면에 `데모 데이터 · 실제 현재 정보가 아님` 워터마크를 고정하고 실제 이동 추천, 현장 신고 전송, 제품 KPI 산정에 포함하지 않는다.
-- live 공식 재고에 synthetic 날씨·행사·graph 맥락을 섞어 live 예측처럼 보이지 않는다. 맥락 입력 중 하나라도 합성이면 해당 contextual ML 결과와 대안은 전체를 demo로 취급한다.
+- `data_source=demo`는 공식 재고 자체가 fixture라는 뜻이고, `response_mode=demo`는 전체 예측·추천 실행이 데모라는 뜻이다. 둘 중 어느 이유로든 response mode가 demo이면 전 화면 워터마크를 고정하고 실제 이동 추천, 현장 신고 전송, 제품 KPI 산정에 포함하지 않는다.
+- live 공식 재고에 synthetic 날씨·행사·graph 맥락을 섞어 live 예측처럼 보이지 않는다. 전체 feature provenance에서 맥락 입력 중 하나라도 합성이면 `uses_synthetic_context=true`, 해당 contextual ML 결과와 모든 대안의 `response_mode=demo`다.
 - 캐시를 표시할 때는 `마지막 조회 N분 전`을 함께 읽어 주며, 캐시된 `stockout_risk_grade`는 유지하지 않는다. 별도 과거 표본 게이트를 통과한 경우에만 L2로 전환한다.
 - API 필드 의미나 좌표 축이 바뀌면 fail-closed로 L0를 반환한다.
 - 프론트엔드는 `mode`별 허용 문구 테이블을 사용한다. `stockout_risk_grade=high`는 반드시 `소진 위험 높음`, `demand_pressure_grade=high`는 반드시 `과거 수요 압력 높음`으로 읽고 “가용성 높음”으로 번역하지 않는다.
@@ -247,7 +249,7 @@ L3 승격 조건의 단일 출처는 [`02_DATA_AND_EVALUATION.md`](./02_DATA_AND
 - 사용자의 현재 위치·검색어·이동경로와 커뮤니티 신고가 feature manifest에 없음을 계약·정적 검사로 확인한다.
 - 평가 문서가 없거나 결과가 미승인 상태이면 L3 기능 플래그의 기본값은 `off`다.
 - **해커톤에서 허용되는 실데이터 모드는 L1 `current_stock`과 L2 `demand_pressure`뿐이다.**
-- `data_source=demo`에서는 L3 UI를 시연할 수 있으나, 전 화면 워터마크를 유지하고 실제 길찾기·신고·KPI·검증 결과에서 제외한다.
+- `response_mode=demo`에서는 L3 UI를 시연할 수 있으나, 전 화면 워터마크를 유지하고 실제 길찾기·신고·KPI·검증 결과에서 제외한다.
 - L3 승인 후에도 제품 문구와 계약 방향성은 이 문서의 `stockout_risk_grade` 규칙을 따른다.
 
 ---
@@ -284,7 +286,7 @@ L3 승격 조건의 단일 출처는 [`02_DATA_AND_EVALUATION.md`](./02_DATA_AND
 타슈 공식 재고 3대 · 2분 전 관측
 ```
 
-L3 승인 후 또는 `data_source=demo` 워터마크 상태:
+L3 승인 후 또는 `response_mode=demo` 워터마크 상태:
 
 ```text
 시청역 8번 출구 · 예상 도보 4분
@@ -327,7 +329,7 @@ L3 승인 후 또는 `data_source=demo` 워터마크 상태:
 
 #### 예시 문구
 
-다음은 contextual L3 승인 후 또는 `data_source=demo` 워터마크 상태의 예시다. `inventory_temporal`이면 제목을 `재고·시간 기반 15분 후 재고 소진 위험`으로 바꾸고 근거에는 fresh 공식 재고·조회 시각만 1~2개 표시한다.
+다음은 contextual L3 승인 후 또는 `response_mode=demo` 워터마크 상태의 예시다. `inventory_temporal`이면 제목을 `재고·시간 기반 15분 후 재고 소진 위험`으로 바꾸고 근거에는 fresh 공식 재고·조회 시각만 1~2개 표시한다.
 
 ```text
 타슈 공식 재고
@@ -399,21 +401,28 @@ L2 화면에서는 다음 문구만 허용한다.
 | UI 상태 / `data_freshness` | 조건 | 사용자 문구 |
 |---|---|---|
 | `loading` | 최초 요청 중 | 타슈 공식 재고를 불러오는 중 |
-| `fresh` | 서버가 `data_freshness=fresh` 반환 | 타슈 공식 재고 N대 · N분 전 관측 |
-| `stale` | 서버가 `data_freshness=stale` 반환 | 오래된 정보예요 · N분 전 관측 · 타슈 공식 앱에서 다시 확인해 주세요 |
+| `fresh` | 서버가 `data_freshness=fresh` 반환 | 타슈 공식 재고 N대 · 우리 서비스가 N분 전 수집 |
+| `stale` | 서버가 `data_freshness=stale` 반환 | 오래된 정보예요 · 우리 서비스가 N분 전 수집 · 타슈 공식 앱에서 다시 확인해 주세요 |
 | `unavailable` | 서버가 `data_freshness=unavailable` 반환 | 현재 공식 재고를 확인할 수 없어요 |
 
-`loading`은 요청 UI 상태이며 `data_freshness` enum이 아니다. `freshness_detail.observed_at_basis=source_observed_at`이면 원천 관측시각을 기준으로 `N분 전 관측`, `observed_at_basis=collected_at`이면 `freshness_detail.collected_at`을 기준으로 **`우리 서비스가 N분 전 수집`**이라고 쓴다. `ingested_at`은 저장 진단값이며 사용자 기준시각으로 쓰지 않는다.
+`loading`은 요청 UI 상태이며 `data_freshness` enum이 아니다. v2.2의 재고 원천은 신뢰할 수 있는 원천 관측시각을 제공하지 않으므로 성공 관측은 `observed_at_basis=collected_at`, `observed_at=collected_at`으로 고정하고 **`우리 서비스가 N분 전 수집`**이라고 쓴다. 이를 타슈 원천의 갱신시각처럼 표현하지 않는다. `ingested_at`은 저장 진단값이며 사용자 기준시각으로 쓰지 않는다.
 
 UI는 `data_freshness`를 재계산하지 않는다. `freshness_detail.age_seconds`, `stale_after_seconds`, `unavailable_after_seconds`는 상세 설명·진단에만 쓰며 상태를 덮어쓰지 않는다. `data_source=demo`의 기본 threshold metadata는 600초/1,800초다.
 
-`data_source`는 `data_freshness`와 별도다.
+`data_source`는 공식 재고 원천이며 `data_freshness`, 전체 실행 상태인 `response_mode`와 별도다.
 
 | `data_source` | 의미 | UI 요구사항 |
 |---|---|---|
-| `live_datago` | 공공데이터포털 조회 경로 | 공식 재고 카드에 출처 표시 |
-| `live_direct` | 타슈 직접 OpenAPI 조회 경로 | 공식 재고 카드에 출처 표시 |
-| `demo` | 합성·고정·리플레이 데이터 | 전 화면 고정 워터마크 `데모 데이터 · 실제 현재 정보가 아님`, 실제 길찾기·신고 비활성화 |
+| `direct_tashu` | 타슈 직접 OpenAPI에서 수집한 재고 | 공식 재고 카드에 `타슈 직접 API` 표시 |
+| `national_integrated` | 전국 공공자전거 실시간 통합 API의 대전 데이터 | 공식 재고 카드에 `전국 통합 API` 표시 |
+| `demo` | 공식 재고 자체가 합성·고정·리플레이 fixture | `response_mode=demo`를 함께 반환 |
+
+공공데이터포털의 `대전광역시_타슈정보(15109253)`는 실제 명세상 정류장·거치대 등 정적 메타데이터 후보이며 현재 자전거 재고 원천이 아니다. 이 데이터로 `data_source`를 만들거나 `dfrCo`를 `bikes_available`로 변환하지 않는다. 두 live 후보도 성공 응답 확보와 7일 이중 수집에서 정류장 매핑·수량 의미·갱신주기·결측률을 비교한 뒤에만 활성화한다.
+
+| `response_mode` | 의미 | UI 요구사항 |
+|---|---|---|
+| `live` | 전체 prediction provenance에 합성 입력이 없고 live 행동에 사용할 수 있음 | 데이터·모델 게이트에 맞는 CTA 허용 |
+| `demo` | 재고 fixture 또는 전체 feature provenance에 합성 입력이 하나라도 있음 | 전 화면 고정 워터마크 `데모 데이터 · 실제 현재 정보가 아님`, 실제 길찾기·신고·KPI 비활성화 |
 
 ### 7.2 커뮤니티 상태
 
@@ -461,7 +470,7 @@ signed 익명 세션은 실제 고유 인원을 증명하지 않는다. `corrobo
 
 ## 8. 최소 데이터 계약
 
-기계 계약의 단일 출처는 [`contracts/openapi.yaml`](./contracts/openapi.yaml)이고, enum 표시명은 [`contracts/enums.json`](./contracts/enums.json)을 따른다. 아래 예시는 해커톤 live 기본 모드인 canonical `StationState` 한 건이다. 제품 문서만 보고 별도 응답 구조를 만들지 않는다.
+기계 계약의 단일 출처는 [`contracts/openapi.yaml`](./contracts/openapi.yaml)이고, enum 표시명은 [`contracts/enums.json`](./contracts/enums.json)을 따른다. 아래는 직접 API가 데이터 게이트를 통과한 뒤에만 쓸 수 있는 계약상 live `StationState` 예시이지, 현재 live 원천이 승인됐다는 뜻이 아니다. 제품 문서만 보고 별도 응답 구조를 만들지 않는다.
 
 ```json
 {
@@ -471,18 +480,19 @@ signed 익명 세션은 실제 고유 인원을 증명하지 않는다. `corrobo
   "lat": 36.3504,
   "lon": 127.3845,
   "walk_minutes": 4,
-  "data_source": "live_datago",
+  "data_source": "direct_tashu",
+  "response_mode": "live",
   "inventory": {
     "bikes_available": 3,
-    "observed_at": "2026-07-21T09:00:00+09:00"
+    "observed_at": "2026-07-21T09:00:05+09:00"
   },
   "data_freshness": "fresh",
   "freshness_detail": {
-    "observed_at": "2026-07-21T09:00:00+09:00",
+    "observed_at": "2026-07-21T09:00:05+09:00",
     "collected_at": "2026-07-21T09:00:05+09:00",
-    "observed_at_basis": "source_observed_at",
+    "observed_at_basis": "collected_at",
     "ingested_at": "2026-07-21T09:00:10+09:00",
-    "age_seconds": 70,
+    "age_seconds": 55,
     "stale_after_seconds": 600,
     "unavailable_after_seconds": 1800,
     "last_error_code": null
@@ -492,8 +502,10 @@ signed 익명 세션은 실제 고유 인원을 증명하지 않는다. `corrobo
     "stockout_probability": null,
     "stockout_risk_grade": null,
     "demand_pressure_grade": null,
+    "horizon_minutes": null,
     "prediction_basis": null,
     "context_status": "unavailable",
+    "uses_synthetic_context": false,
     "feature_contract_version": null,
     "calibration_version": null,
     "context_evidence": [],
@@ -526,16 +538,16 @@ signed 익명 세션은 실제 고유 인원을 증명하지 않는다. `corrobo
 
 - `inventory=null`은 현재 공식 재고 결측이고 `inventory.bikes_available=0`은 유효한 0대다. 두 상태를 직렬화·UI·로그에서 구분한다.
 - `data_freshness=fresh`이면 `inventory`는 반드시 non-null이다. 현재 재고 객체가 없는데 `fresh`로 표시하는 응답은 계약 오류다.
-- `data_source`는 top-level `live_datago/live_direct/demo` 중 하나이며 `data_freshness`와 독립적으로 해석한다.
+- `data_source`는 정류장별 공식 재고 원천 `direct_tashu/national_integrated/demo`, `response_mode`는 전체 실행 상태 `live/demo`이며 서로와 `data_freshness`를 독립적으로 해석한다. `15109253` 정적 메타데이터는 이 enum에 들어가지 않는다.
 - UI는 서버의 `data_freshness`를 재계산하거나 덮어쓰지 않는다. `freshness_detail.age_seconds`, `stale_after_seconds`, `unavailable_after_seconds`는 설명·진단용 metadata다.
-- `freshness_detail.observed_at`이 non-null이면 `observed_at_basis`도 non-null이어야 한다. `source_observed_at`은 원천 시각, `collected_at`은 우리 수집시각을 뜻한다.
+- `freshness_detail.observed_at`이 non-null이면 `observed_at_basis=collected_at`이어야 하며 `observed_at`과 `collected_at`은 같아야 한다. 신뢰할 수 있는 원천 관측시각을 제공하는 새 source를 추가하려면 OpenAPI 버전을 올리고 producer·consumer·fixture를 함께 변경한다.
 - `observed_at_basis=collected_at`이면 `observed_at`과 `collected_at`은 같아야 한다. 성공 관측이 없는 `unavailable`에서는 `observed_at`, `collected_at`, `observed_at_basis`가 모두 null일 수 있다.
-- `data_source=demo`이면 `data_freshness`와 관계없이 전 화면 워터마크를 표시하고 실제 이동·신고 CTA를 비활성화한다.
+- `data_source=demo`이면 반드시 `response_mode=demo`다. 또한 전체 feature provenance에서 `uses_synthetic_context=true`이면 공개 evidence에 그 feature가 선택되지 않았어도 `response_mode=demo`다. response mode가 demo이면 전 화면 워터마크를 표시하고 실제 이동·신고 CTA와 KPI 전송을 비활성화한다.
 - `mode=stockout_risk`일 때만 `stockout_probability`와 `stockout_risk_grade`가 non-null이고, `mode=demand_pressure`일 때만 `demand_pressure_grade`가 non-null이다. 확률은 정확히 `P(parking_count(t+15분)<1)`이며 대여 성공·정상 자전거·고장 확률이 아니다.
 - `mode=current_stock|demand_pressure|unavailable`에서는 `stockout_probability=null`이다. `current_stock|unavailable`에서는 두 grade도 모두 null이며 서로 다른 mode의 출력이 동시에 non-null이면 계약 오류로 처리한다.
-- graded mode는 방향이 고정된 `grade_direction`과 경계의 `threshold_version`을 함께 가진다. 15분 horizon은 `ForecastResponse.eta_minutes=15`로 고정한다.
+- graded mode는 `horizon_minutes=15`, 방향이 고정된 `grade_direction`과 경계의 `threshold_version`을 함께 가진다. `ForecastResponse.eta_minutes=15`도 같은 요청 horizon이며 목록·대안에 내장된 예측은 decision signal의 horizon으로 검증한다.
 - L3 계약은 `prediction_basis`, `context_status`, feature contract·model·calibration·threshold version을 제공한다. `contextual_ml`은 실제 prediction provenance에서 고른 외부 맥락 근거 1~2개를, `inventory_temporal`은 fresh 공식 재고 근거 1~2개를 반환한다. L2 `demand_pressure`는 `prediction_basis=historical_demand`와 빈 근거 배열을 사용한다. graph·context snapshot 식별자는 내부 재현 로그에 남기며 공개 응답 필드는 OpenAPI를 따른다.
-- 사용자 노출용 `context_evidence` 배열은 최대 2개이며 각 항목은 basis에 허용된 유형, 공개 출처, 발행 또는 갱신 시각, 모델에 반영된 방향을 가진다. 자유서술 원인과 raw attribution은 계약에 넣지 않는다.
+- 사용자 노출용 `context_evidence` 배열은 최대 2개다. `contextual_ml`은 `weather|calendar|event|neighbor|temporal`, `inventory_temporal`은 `inventory`만 허용한다. weather/calendar/event는 non-null `issued_at`, 모든 항목은 공개 출처, non-null `valid_at`, 모델에 반영된 방향을 가지며 자유서술 원인과 raw attribution은 계약에 넣지 않는다.
 - 공식 재고의 `data_source`·`data_freshness`와 맥락 source·freshness를 하나의 값으로 합치지 않는다. 필요한 맥락이 부분 결측이면 full-context 결과를 재사용하지 않는다.
 - `data_freshness=fresh`에서는 `stockout_risk|current_stock`, `stale|unavailable`에서는 `demand_pressure|unavailable` mode만 허용한다.
 - `stockout_risk_grade`의 `high`는 소진 위험이 높다는 뜻이고 `low`는 소진 위험이 낮다는 뜻이다. 가용성 등급으로 반전해 해석하지 않는다.
@@ -555,9 +567,9 @@ signed 익명 세션은 실제 고유 인원을 증명하지 않는다. `corrobo
 
 | 이벤트 | 필수 속성 |
 |---|---|
-| `station_list_view` | decision_signal.mode, prediction_basis, context_status, data_source, fresh 정류장 수, 위치 사용 여부 |
-| `station_detail_view` | station_id, data_source, data_freshness, decision_signal.mode, prediction_basis, context_status, context_evidence_kind 최대 2개, stockout_risk_grade, demand_pressure_grade |
-| `alternative_route_click` | origin_station_id, destination_station_id, data_source, data_freshness, decision_signal.mode, prediction_basis, context_status, stockout_risk_grade, demand_pressure_grade, walk_minutes |
+| `station_list_view` | response_mode, decision_signal.mode, prediction_basis, context_status, data_source, fresh 정류장 수, 위치 사용 여부 |
+| `station_detail_view` | station_id, response_mode, data_source, data_freshness, decision_signal.mode, horizon_minutes, prediction_basis, context_status, context_evidence_kind 최대 2개, stockout_probability, stockout_risk_grade, demand_pressure_grade |
+| `alternative_route_click` | origin_station_id, destination_station_id, response_mode, data_source, data_freshness, decision_signal.mode, horizon_minutes, prediction_basis, context_status, stockout_risk_grade, demand_pressure_grade, walk_minutes |
 | `field_report_start` | station_id |
 | `field_report_submit` | station_id, category, elapsed_seconds, online 여부 |
 | `official_report_click` | station_id, category |
@@ -578,7 +590,7 @@ signed 익명 세션은 실제 고유 인원을 증명하지 않는다. `corrobo
 - 본문 기본 글자 크기는 최소 `16 CSS px`, 줄높이는 최소 `1.5`다.
 - 브라우저 200% 확대에서 정보·기능 손실이 없고, 폭 `320 CSS px`에서 지도 외 가로 스크롤이 없다.
 - 상태는 색만으로 구분하지 않고 텍스트와 아이콘을 함께 사용한다.
-- `data_source=demo` 워터마크는 색·배경만이 아니라 `데모 데이터 · 실제 현재 정보가 아님` 텍스트로 항상 보인다.
+- `response_mode=demo` 워터마크는 색·배경만이 아니라 `데모 데이터 · 실제 현재 정보가 아님` 텍스트로 항상 보인다.
 - 시스템 `prefers-reduced-motion`에서 비필수 애니메이션을 제거한다.
 
 ### 9.2 키보드·보조기술
@@ -588,7 +600,7 @@ signed 익명 세션은 실제 고유 인원을 증명하지 않는다. `corrobo
 - 지도에 표시된 모든 정류장은 동일 순서·기능의 목록으로 접근 가능하다. 지도 조작이 핵심 과업의 필수 단계가 아니다.
 - 정류장 행의 접근 가능한 이름에는 `정류장명, 예상 도보시간, 공식 재고, 조회 시각, 허용된 신호, 커뮤니티 신고`가 이 순서로 포함된다. 맥락 근거를 목록에 표시하는 경우 신호 뒤에 최대 두 개만 읽고 출처·시각은 상세 화면에서 확인할 수 있다고 알린다.
 - 로딩, 지연, 제출 성공·실패는 `aria-live` 또는 플랫폼 동등 기능으로 한 번만 읽힌다.
-- `data_source=demo`에서는 화면 제목 직후 워터마크를 한 번 읽고, 비활성화된 길찾기·신고 CTA에는 비활성 이유를 연결한다.
+- `response_mode=demo`에서는 화면 제목 직후 워터마크를 한 번 읽고, 비활성화된 길찾기·신고 CTA에는 비활성 이유를 연결한다.
 - 입력 오류는 해당 필드와 프로그램적으로 연결되고, 포커스가 첫 오류로 이동한다.
 - 아이콘 버튼은 보이는 텍스트 또는 명확한 접근 가능한 이름을 갖는다.
 
@@ -675,7 +687,7 @@ signed 익명 세션은 실제 고유 인원을 증명하지 않는다. `corrobo
 - API 이용약관, 재배포, 출처 표기, 호출 한도를 원문 또는 운영기관 답변으로 보관한다.
 - API 스키마·좌표·`parking_count` 의미를 표본 대조한다. 구체 데이터 합격 기준은 `02_DATA_AND_EVALUATION.md`를 따른다.
 - 날씨 예보 archive, 공식 휴일 달력, 행사 일정·수정 이력, station graph의 이용조건·보존 가능성·발행/갱신 시각을 원문과 fixture로 확인한다.
-- 실제 발행 이력을 확보하지 못한 맥락은 live 학습·평가·설명에서 제외하고 `data_source=demo` 시나리오로만 사용한다.
+- 실제 발행 이력을 확보하지 못한 맥락은 live 학습·평가·설명에서 제외하고 `uses_synthetic_context=true`, `response_mode=demo` 시나리오로만 사용한다.
 - 수집 시각과 원천 갱신 시각의 차이를 문서화한다.
 - 실패·결측·0대가 서로 다른 테스트 케이스로 통과한다.
 - 미통과 항목이 있으면 5장의 규칙과 `02_DATA_AND_EVALUATION.md`의 게이트에 따라 승인된 `inventory_temporal`, L1, 검증된 L2, L0 순의 허용 경로로 강등한다.

@@ -35,7 +35,7 @@
 | | 내용 |
 |---|---|
 | **사람의 몫** | 미적 방향 선택(AI가 낸 시안 중 픽), 실사용자 사용성 테스트 수행·관찰, "이 화면이 오해를 낳는가"의 최종 판단 |
-| **AI의 몫** | 컴포넌트·화면 코드 생성(코드로 디자인), `화면 × freshness × context_status × prediction_basis × 라이트·다크` 매트릭스 전수 생성, context evidence의 출처·시각·강등 상태 표현, 접근성 자동 점검·수정, 시각 회귀 테스트 |
+| **AI의 몫** | 컴포넌트·화면 코드 생성(코드로 디자인), `화면 × response_mode × freshness × context_status × prediction_basis × 라이트·다크` 매트릭스 전수 생성, context evidence의 출처·시각·강등 상태 표현, 접근성 자동 점검·수정, 시각 회귀 테스트 |
 | **주요 지시 대상 산출물** | 프론트 컴포넌트, `contracts/enums.json`의 UI 라벨 반영, 상태별 스크린샷 세트 |
 
 **지시할 때 반드시 거는 제약**:
@@ -43,6 +43,7 @@
 - 관측과 추론의 분리(README §4-2): 원본 수량·기준 시각·예측 등급·커뮤니티 신고·공식 상태가 한 컴포넌트에 섞이면 반려.
 - context evidence는 최대 2개, 출처와 시각을 포함하고 “비 때문에 소진” 같은 인과 문구나 raw SHAP 수치를 만들지 않게 한다.
 - `context_status=partial|unavailable`과 `inventory_temporal|current_stock` 폴백을 정상 상태만큼 완성도 있게 설계하게 한다.
+- `response_mode=demo`이면 공식 재고가 live source여도 화면 전체의 실제 길찾기·신고 CTA와 KPI 전송을 차단하게 한다.
 - 대표 화면만 만들고 끝내지 못하게 한다 — 상태 매트릭스 전수를 명시적으로 요구(사람 디자이너가 빠뜨리는 지점을 AI의 강점으로 메우는 것이 이 페어의 존재 이유).
 
 ### 1.3 개발 담당 × AI
