@@ -1,0 +1,14 @@
+{
+  "per_station": true,
+  "F_node": 15,
+  "F_global": 4,
+  "ma_window": 4,
+  "feat": [
+    "flow_z",
+    "flow_ma",
+    "dowround_base",
+    "vol_ma",
+    "dow*7",
+    "round*4"
+  ]
+}

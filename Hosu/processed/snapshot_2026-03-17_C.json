@@ -1,0 +1,954 @@
+{
+  "meta": {
+    "date": "2026-03-17",
+    "round_id": "C",
+    "time": "16:00",
+    "mode": "demo",
+    "demo_mode": true,
+    "note": "predicted_net_flow는 수급 경향값"
+  },
+  "priority_bikes": [
+    {
+      "bike_id": "DJ2-2223",
+      "station_id": "ST0887",
+      "idle_days": 378.2,
+      "broken_score": 0.842
+    },
+    {
+      "bike_id": "DJ3-3875",
+      "station_id": "ST0764",
+      "idle_days": 561.3,
+      "broken_score": 0.58
+    },
+    {
+      "bike_id": "DJ3-3675",
+      "station_id": "ST0022",
+      "idle_days": 562.9,
+      "broken_score": 0.533
+    },
+    {
+      "bike_id": "DJ3-3615",
+      "station_id": "ST1016",
+      "idle_days": 554.3,
+      "broken_score": 0.519
+    },
+    {
+      "bike_id": "DJ3-4126",
+      "station_id": "ST0200",
+      "idle_days": 156.0,
+      "broken_score": 0.495
+    },
+    {
+      "bike_id": "DJ2-2364",
+      "station_id": "ST1257",
+      "idle_days": 42.3,
+      "broken_score": 0.495
+    },
+    {
+      "bike_id": "DJ3-0339",
+      "station_id": "ST0022",
+      "idle_days": 41.2,
+      "broken_score": 0.484
+    },
+    {
+      "bike_id": "DJ2-1171",
+      "station_id": "ST0022",
+      "idle_days": 243.3,
+      "broken_score": 0.479
+    },
+    {
+      "bike_id": "DJ3-3637",
+      "station_id": "ST0764",
+      "idle_days": 114.1,
+      "broken_score": 0.47
+    },
+    {
+      "bike_id": "DJ2-2407",
+      "station_id": "ST0462",
+      "idle_days": 320.9,
+      "broken_score": 0.46
+    }
+  ],
+  "stations": [
+    {
+      "station_id": "ST1020",
+      "station_name": "궁동 충대정문오거리1(정문)",
+      "location": {
+        "lat": 36.362495,
+        "lng": 127.344141
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 8,
+        "broken_suspected": 1,
+        "real_available": 7
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.2,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST1052",
+      "station_name": "궁동 충남대학교 입구 버스정류장(황금상회)",
+      "location": {
+        "lat": 36.361238,
+        "lng": 127.346071
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 12,
+        "broken_suspected": 1,
+        "real_available": 11
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.5,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0193",
+      "station_name": "궁동 온천교(충남대학교 방면)",
+      "location": {
+        "lat": 36.360726,
+        "lng": 127.344422
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 14,
+        "broken_suspected": 1,
+        "real_available": 13
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": -0.3,
+        "shortage_pressure": 0.02
+      }
+    },
+    {
+      "station_id": "ST0765",
+      "station_name": "궁동 충남대학교(온천교 방면)",
+      "location": {
+        "lat": 36.360638,
+        "lng": 127.34379
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 8,
+        "broken_suspected": 1,
+        "real_available": 7
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.5,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0192",
+      "station_name": "궁동 다솔아파트 입구",
+      "location": {
+        "lat": 36.361324,
+        "lng": 127.34789
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 10,
+        "broken_suspected": 1,
+        "real_available": 9
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": -0.6,
+        "shortage_pressure": 0.03
+      }
+    },
+    {
+      "station_id": "ST1016",
+      "station_name": "궁동 충남대학교 학생회관",
+      "location": {
+        "lat": 36.366431,
+        "lng": 127.345595
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 31,
+        "broken_suspected": 3,
+        "real_available": 28
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": -2.4,
+        "shortage_pressure": 0.12
+      }
+    },
+    {
+      "station_id": "ST1440",
+      "station_name": "장대동 궁동2교 (죽동 방향)",
+      "location": {
+        "lat": 36.363839,
+        "lng": 127.340334
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 9,
+        "broken_suspected": 0,
+        "real_available": 9
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.7,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST1257",
+      "station_name": "궁동 유성문화원",
+      "location": {
+        "lat": 36.359936,
+        "lng": 127.341183
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 4,
+        "broken_suspected": 1,
+        "real_available": 3
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.5,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST1023",
+      "station_name": "봉명동 매드블럭",
+      "location": {
+        "lat": 36.358699,
+        "lng": 127.343662
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 7,
+        "broken_suspected": 1,
+        "real_available": 6
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.0,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0199",
+      "station_name": "봉명동 하이랜드 1차",
+      "location": {
+        "lat": 36.358877,
+        "lng": 127.347443
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 8,
+        "broken_suspected": 1,
+        "real_available": 7
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.6,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST1021",
+      "station_name": "궁동 버스정류장(유성구청 방향)",
+      "location": {
+        "lat": 36.360527,
+        "lng": 127.349743
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 6,
+        "broken_suspected": 1,
+        "real_available": 5
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 1.1,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0404",
+      "station_name": "봉명동 한진오피스텔",
+      "location": {
+        "lat": 36.357899,
+        "lng": 127.342711
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 10,
+        "broken_suspected": 1,
+        "real_available": 9
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.4,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST1019",
+      "station_name": "장대동 장대네거리(하이마트)",
+      "location": {
+        "lat": 36.363979,
+        "lng": 127.338297
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 6,
+        "broken_suspected": 0,
+        "real_available": 6
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.4,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST1018",
+      "station_name": "장대동 장대네거리(학사마을) ",
+      "location": {
+        "lat": 36.364937,
+        "lng": 127.338671
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 12,
+        "broken_suspected": 1,
+        "real_available": 11
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.5,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0766",
+      "station_name": "봉명동 스카이뷰로드오피스텔 건너편",
+      "location": {
+        "lat": 36.357527,
+        "lng": 127.343184
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 8,
+        "broken_suspected": 1,
+        "real_available": 7
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.6,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0366",
+      "station_name": "궁동 충남대학교 약학대학",
+      "location": {
+        "lat": 36.368553,
+        "lng": 127.343705
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 8,
+        "broken_suspected": 0,
+        "real_available": 8
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.3,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0198",
+      "station_name": "봉명동 노블레스3",
+      "location": {
+        "lat": 36.358541,
+        "lng": 127.349748
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 7,
+        "broken_suspected": 2,
+        "real_available": 5
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.7,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0887",
+      "station_name": "장대동 월드컵패밀리타운아파트 106동(유성대로 방향)",
+      "location": {
+        "lat": 36.363941,
+        "lng": 127.337671
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 7,
+        "broken_suspected": 1,
+        "real_available": 6
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.4,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0886",
+      "station_name": "장대동 드림월드아파트 102동(유성대로 방향)",
+      "location": {
+        "lat": 36.362339,
+        "lng": 127.336965
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 3,
+        "broken_suspected": 1,
+        "real_available": 2
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.4,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0368",
+      "station_name": "궁동 충남대학교 인문대학",
+      "location": {
+        "lat": 36.368768,
+        "lng": 127.341742
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 10,
+        "broken_suspected": 0,
+        "real_available": 10
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.3,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0763",
+      "station_name": "어은동 한빛아파트(126동 건너편)",
+      "location": {
+        "lat": 36.363151,
+        "lng": 127.352945
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 0,
+        "broken_suspected": 3,
+        "real_available": 0
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 3.8,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST1443",
+      "station_name": "어은동 한빛아파트(126동 앞)",
+      "location": {
+        "lat": 36.363314,
+        "lng": 127.353114
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 0,
+        "broken_suspected": 1,
+        "real_available": 0
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 1.0,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0195",
+      "station_name": "봉명동 홍인 오피스텔",
+      "location": {
+        "lat": 36.356149,
+        "lng": 127.34264
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 8,
+        "broken_suspected": 1,
+        "real_available": 7
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.4,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST1015",
+      "station_name": "궁동 충남대학교 중앙도서관",
+      "location": {
+        "lat": 36.369513,
+        "lng": 127.346736
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 5,
+        "broken_suspected": 0,
+        "real_available": 5
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.2,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0194",
+      "station_name": "봉명동 현대리조텔",
+      "location": {
+        "lat": 36.356127,
+        "lng": 127.342022
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 9,
+        "broken_suspected": 0,
+        "real_available": 9
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.4,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0888",
+      "station_name": "장대동 어울림주간보호센터",
+      "location": {
+        "lat": 36.361372,
+        "lng": 127.335949
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 7,
+        "broken_suspected": 1,
+        "real_available": 6
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.4,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0487",
+      "station_name": "장대동 장대공원 내 놀이터 옆",
+      "location": {
+        "lat": 36.358342,
+        "lng": 127.337592
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 0,
+        "broken_suspected": 1,
+        "real_available": 0
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.8,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0892",
+      "station_name": "죽동 노브랜드",
+      "location": {
+        "lat": 36.368872,
+        "lng": 127.339351
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 9,
+        "broken_suspected": 1,
+        "real_available": 8
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.6,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0889",
+      "station_name": "장대동 장대네거리 (죽동네거리 방면) 정류장",
+      "location": {
+        "lat": 36.365405,
+        "lng": 127.335809
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 7,
+        "broken_suspected": 1,
+        "real_available": 6
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.5,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0764",
+      "station_name": "어은동 어은치안센터 입구",
+      "location": {
+        "lat": 36.360821,
+        "lng": 127.354303
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 0,
+        "broken_suspected": 2,
+        "real_available": 0
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 1.9,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0200",
+      "station_name": "봉명동 사이언스타운",
+      "location": {
+        "lat": 36.354888,
+        "lng": 127.34463
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 7,
+        "broken_suspected": 2,
+        "real_available": 5
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.5,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0406",
+      "station_name": "봉명동 홈플러스 유성점",
+      "location": {
+        "lat": 36.359421,
+        "lng": 127.354083
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 6,
+        "broken_suspected": 1,
+        "real_available": 5
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.5,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0369",
+      "station_name": "어은동 충남대학교 상록회관 입구",
+      "location": {
+        "lat": 36.369338,
+        "lng": 127.351133
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 8,
+        "broken_suspected": 0,
+        "real_available": 8
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.1,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0488",
+      "station_name": "장대동 장대경로당",
+      "location": {
+        "lat": 36.358896,
+        "lng": 127.335469
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 8,
+        "broken_suspected": 0,
+        "real_available": 8
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.5,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST1017",
+      "station_name": "죽동 충남대학교 서문네거리",
+      "location": {
+        "lat": 36.37041,
+        "lng": 127.339933
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 7,
+        "broken_suspected": 0,
+        "real_available": 7
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.4,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0201",
+      "station_name": "봉명동 호텔인터시티",
+      "location": {
+        "lat": 36.354465,
+        "lng": 127.347672
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 7,
+        "broken_suspected": 1,
+        "real_available": 6
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.8,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0462",
+      "station_name": "봉명동 투유아파트 1차",
+      "location": {
+        "lat": 36.355963,
+        "lng": 127.35146
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 9,
+        "broken_suspected": 1,
+        "real_available": 8
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.6,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0330",
+      "station_name": "죽동 충남대학교 서문 건너편(궁동교 방면) 정류장",
+      "location": {
+        "lat": 36.370704,
+        "lng": 127.340116
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 5,
+        "broken_suspected": 1,
+        "real_available": 4
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.3,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST0022",
+      "station_name": "봉명동 유성한가족 요양병원 소공원",
+      "location": {
+        "lat": 36.355079,
+        "lng": 127.350214
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 4,
+        "broken_suspected": 1,
+        "real_available": 3
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": 0.6,
+        "shortage_pressure": 0.0
+      }
+    },
+    {
+      "station_id": "ST1085",
+      "station_name": "봉명동 유성온천역 6번출구",
+      "location": {
+        "lat": 36.354255,
+        "lng": 127.341439
+      },
+      "current_weather": {
+        "status": "맑음",
+        "precipitation_mm": 0.0,
+        "temperature_c": 11.6
+      },
+      "ml_correction": {
+        "api_available": 13,
+        "broken_suspected": 1,
+        "real_available": 12
+      },
+      "stgnn_prediction": {
+        "predicted_net_flow": -0.4,
+        "shortage_pressure": 0.02
+      }
+    }
+  ]
+}
